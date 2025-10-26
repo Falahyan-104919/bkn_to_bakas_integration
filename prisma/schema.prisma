@@ -1,0 +1,1437 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model jabatanUmum {
+  jabatanUmumId        Int     @id
+  JabatanUmumKode      String? @db.VarChar(255)
+  jabatanUmumNama      String? @db.VarChar(255)
+  jabatanUmumCepatKode String? @db.VarChar(255)
+  jabatanUmumStatus    Int?
+}
+
+model ms_adm_hukuman {
+  adm_hukuman_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  adm_hukuman_kode        String?   @db.VarChar(255)
+  adm_hukuman_nama        String?   @db.VarChar(255)
+  adm_hukuman_create_by   Int?
+  adm_hukuman_create_date DateTime? @db.DateTime(0)
+  adm_hukuman_status      Int?
+
+  @@index([adm_hukuman_nama], map: "IDS")
+}
+
+model ms_alasan_hukuman {
+  alasan_hukuman_id          Int       @id @default(autoincrement())
+  alasan_hukuman_kode        String?   @db.VarChar(255)
+  alasan_hukuman_nama        String?   @db.VarChar(255)
+  alasan_hukuman_keterangan  String?   @db.VarChar(255)
+  alasan_hukuman_status      Int?
+  alasan_hukuman_create_date DateTime? @db.DateTime(0)
+  alasan_hukuman_update_date DateTime? @db.DateTime(0)
+  alasan_hukuman_create_by   Int?
+  alasan_hukuman_update_by   Int?
+}
+
+model ms_api_code {
+  api_device_id               Int       @id @default(autoincrement())
+  api_device_app_code         String?   @db.VarChar(255)
+  api_device_app_name         String?   @db.VarChar(255)
+  api_device_create_by        Int?
+  api_device_create_date      DateTime? @db.DateTime(0)
+  api_device_status           Int?
+  api_device_last_access_date DateTime? @db.DateTime(0)
+}
+
+model ms_cuti {
+  cuti_id          Int       @id @default(autoincrement())
+  cuti_name        String?   @db.VarChar(255)
+  cuti_create_by   Int?
+  cuti_create_date DateTime? @db.DateTime(0)
+  cuti_update_by   Int?
+  cuti_update_date DateTime? @db.DateTime(0)
+  cuti_status      Int?
+}
+
+model ms_diklat_jenis {
+  ms_diklat_jenis_id          Int       @id @default(autoincrement())
+  ms_diklat_jenis_name        String?   @db.VarChar(255)
+  ms_diklat_jenis_create_date DateTime? @db.DateTime(0)
+  ms_diklat_jenis_create_by   Int?
+  ms_diklat_jenis_status      Int?
+  ms_diklat_jenis_kode        Int?
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ms_employee {
+  employee_id                 Int       @id @unique(map: "ID") @default(autoincrement())
+  employee_fullname           String?   @db.VarChar(255)
+  employee_nip                String?   @db.VarChar(255)
+  employee_address            String?   @db.LongText
+  employee_photo              String?   @default("defaultphoto.jpg") @db.VarChar(255)
+  employee_phone              String?   @db.VarChar(32)
+  employee_email              String?   @db.VarChar(125)
+  employee_create_by          Int?
+  employee_create_date        DateTime? @db.DateTime(0)
+  employee_update_by          Int?
+  employee_update_date        DateTime? @db.DateTime(0)
+  employee_status             Int?
+  employee_log_code           String?   @db.VarChar(255)
+  employee_gender             Int?
+  employee_religion           Int?
+  employee_oldnip             String?   @db.VarChar(255)
+  employee_dateofbirth        DateTime? @db.Date
+  employee_placeofbirth       String?   @db.VarChar(255)
+  employee_npwp               String?   @db.VarChar(255)
+  employee_bpjs               String?   @db.VarChar(255)
+  employee_nik                String?   @db.VarChar(255)
+  employee_gelardepan         String?   @db.VarChar(255)
+  employee_gelarbelakang      String?   @db.VarChar(255)
+  employee_kelurahan_id       Int?
+  employee_karpeg             String?   @db.VarChar(255)
+  employee_pos                Int?
+  employee_alamat_domisili    String?   @db.VarChar(255)
+  employee_kelurahan_domisili Int?
+  employee_pos_domisili       Int?
+  employee_darah              Int?
+  employee_pensiun_id         Int?
+  employee_taspen             String?   @db.VarChar(255)
+  employee_karis_karsu        String?   @db.VarChar(255)
+  employee_tinggi             String?   @db.VarChar(255)
+  employee_berat              String?   @db.VarChar(255)
+  employee_rambut             String?   @db.VarChar(255)
+  employee_muka               String?   @db.VarChar(255)
+  employee_warna              String?   @db.VarChar(255)
+  employee_ciri               String?   @db.VarChar(255)
+  employee_cacat              String?   @db.VarChar(255)
+  employee_pmk_tahun          Int?
+  employee_pmk_bulan          Int?
+  employee_pmk_tmt            DateTime? @db.Date
+  employee_status_asn         Int?
+  employee_bkn                String?   @db.VarChar(255)
+  employee_facereg            Int?      @db.TinyInt
+
+  @@index([employee_fullname, employee_gender, employee_religion, employee_status, employee_kelurahan_id, employee_pensiun_id], map: "NAME")
+  @@index([employee_nip], map: "NIP")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ms_employee_copy1 {
+  employee_id                 Int       @id @unique(map: "ID") @default(autoincrement())
+  employee_fullname           String?   @db.VarChar(255)
+  employee_nip                String?   @db.VarChar(255)
+  employee_address            String?   @db.LongText
+  employee_photo              String?   @default("defaultphoto.jpg") @db.VarChar(255)
+  employee_phone              String?   @db.VarChar(32)
+  employee_email              String?   @db.VarChar(125)
+  employee_create_by          Int?
+  employee_create_date        DateTime? @db.DateTime(0)
+  employee_update_by          Int?
+  employee_update_date        DateTime? @db.DateTime(0)
+  employee_status             Int?
+  employee_log_code           String?   @db.VarChar(255)
+  employee_gender             Int?
+  employee_religion           Int?
+  employee_oldnip             String?   @db.VarChar(255)
+  employee_dateofbirth        DateTime? @db.Date
+  employee_placeofbirth       String?   @db.VarChar(255)
+  employee_npwp               String?   @db.VarChar(255)
+  employee_bpjs               String?   @db.VarChar(255)
+  employee_nik                String?   @db.VarChar(255)
+  employee_gelardepan         String?   @db.VarChar(255)
+  employee_gelarbelakang      String?   @db.VarChar(255)
+  employee_kelurahan_id       Int?
+  employee_karpeg             String?   @db.VarChar(255)
+  employee_pos                Int?
+  employee_alamat_domisili    String?   @db.VarChar(255)
+  employee_kelurahan_domisili Int?
+  employee_pos_domisili       Int?
+  employee_darah              Int?
+  employee_pensiun_id         Int?
+  employee_taspen             String?   @db.VarChar(255)
+  employee_karis_karsu        String?   @db.VarChar(255)
+  employee_tinggi             String?   @db.VarChar(255)
+  employee_berat              String?   @db.VarChar(255)
+  employee_rambut             String?   @db.VarChar(255)
+  employee_muka               String?   @db.VarChar(255)
+  employee_warna              String?   @db.VarChar(255)
+  employee_ciri               String?   @db.VarChar(255)
+  employee_cacat              String?   @db.VarChar(255)
+  employee_pmk_tahun          Int?
+  employee_pmk_bulan          Int?
+  employee_pmk_tmt            DateTime? @db.Date
+  employee_status_asn         Int?
+
+  @@index([employee_fullname, employee_gender, employee_religion, employee_status, employee_kelurahan_id, employee_pensiun_id], map: "NAME")
+  @@index([employee_nip], map: "NIP")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ms_employee_history {
+  employee_id                 Int       @id @default(autoincrement())
+  employee_fullname           String?   @db.VarChar(255)
+  employee_nip                String?   @db.VarChar(255)
+  employee_address            String?   @db.LongText
+  employee_photo              String?   @default("defaultphoto.jpg") @db.VarChar(255)
+  employee_phone              String?   @db.VarChar(32)
+  employee_email              String?   @db.VarChar(125)
+  employee_create_by          Int?
+  employee_create_date        DateTime? @db.DateTime(0)
+  employee_update_by          Int?
+  employee_update_date        DateTime? @db.DateTime(0)
+  employee_status             Int?
+  employee_log_code           String?   @db.VarChar(255)
+  employee_gender             Int?
+  employee_religion           Int?
+  employee_oldnip             String?   @db.VarChar(255)
+  employee_dateofbirth        DateTime? @db.Date
+  employee_placeofbirth       String?   @db.VarChar(255)
+  employee_npwp               String?   @db.VarChar(255)
+  employee_bpjs               String?   @db.VarChar(255)
+  employee_nik                String?   @db.VarChar(255)
+  employee_gelardepan         String?   @db.VarChar(255)
+  employee_gelarbelakang      String?   @db.VarChar(255)
+  employee_kelurahan_id       Int?
+  employee_karpeg             String?   @db.VarChar(255)
+  employee_pos                Int?
+  employee_alamat_domisili    String?   @db.VarChar(255)
+  employee_kelurahan_domisili Int?
+  employee_pos_domisili       Int?
+  employee_darah              Int?
+  employee_pensiun_id         Int?
+  employee_taspen             String?   @db.VarChar(255)
+  employee_karis_karsu        String?   @db.VarChar(255)
+  employee_tinggi             String?   @db.VarChar(255)
+  employee_berat              String?   @db.VarChar(255)
+  employee_rambut             String?   @db.VarChar(255)
+  employee_muka               String?   @db.VarChar(255)
+  employee_warna              String?   @db.VarChar(255)
+  employee_ciri               String?   @db.VarChar(255)
+  employee_cacat              String?   @db.VarChar(255)
+  employee_pmk_tahun          Int?
+  employee_pmk_bulan          Int?
+  employee_pmk_tmt            DateTime? @db.Date
+
+  @@unique([employee_id, employee_nip], map: "ID")
+  @@index([employee_fullname, employee_gender, employee_religion, employee_status, employee_kelurahan_id, employee_pensiun_id], map: "NAME")
+}
+
+model ms_employee_tukin {
+  tukin_id          Int       @id @default(autoincrement())
+  tukin_employee_id Int?
+  tukin_employee    Decimal?  @db.Decimal(10, 2)
+  tukin_create_by   Int?
+  tukin_create_date DateTime? @db.DateTime(0)
+  tukin_update_by   Int?
+  tukin_update_date DateTime? @db.DateTime(0)
+  tukin_start_date  DateTime? @db.Date
+  tukin_end_date    DateTime? @db.Date
+  tukin_status      Int?
+  tukin_pph         Decimal?  @db.Decimal(10, 2)
+}
+
+model ms_eselon {
+  eselon_id            Int     @unique(map: "ID") @default(autoincrement())
+  eselon_kode          Int?
+  eselon_nama          String? @db.VarChar(255)
+  eselon_status        Int?
+  eselon_kelas_jabatan Int?
+  eselon_jabatan       String? @db.VarChar(255)
+  eselon_jenjang       String? @db.VarChar(255)
+
+  @@index([eselon_kode, eselon_nama], map: "NAME")
+}
+
+model ms_gaji {
+  gaji_id           Int       @id @unique(map: "ID") @default(autoincrement())
+  gaji_golongan_id  Int?
+  gaji_masa_kerja   Int?      @db.TinyInt
+  gaji_gaji         String?   @db.VarChar(255)
+  gaji_peraturan_id Int?
+  gaji_create_date  DateTime? @db.DateTime(0)
+  gaji_create_by    Int?
+  gaji_status       Int?
+
+  @@index([gaji_golongan_id, gaji_masa_kerja, gaji_gaji, gaji_peraturan_id], map: "IDS")
+}
+
+model ms_gaji_p3k {
+  gaji_id           Int       @id @unique(map: "ID") @default(autoincrement())
+  gaji_golongan_id  Int?
+  gaji_masa_kerja   Int?      @db.TinyInt
+  gaji_gaji         String?   @db.VarChar(255)
+  gaji_peraturan_id Int?
+  gaji_create_date  DateTime? @db.DateTime(0)
+  gaji_create_by    Int?
+  gaji_status       Int?
+
+  @@index([gaji_golongan_id, gaji_masa_kerja, gaji_gaji, gaji_peraturan_id], map: "IDS")
+}
+
+model ms_gender {
+  gender_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  gender_nama        String?   @db.VarChar(255)
+  gender_create_by   Int?
+  gender_create_date DateTime? @db.DateTime(0)
+  gender_status      Int?
+
+  @@index([gender_nama], map: "NAMA")
+}
+
+model ms_golongan {
+  golongan_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  golongan_kode        String?   @db.VarChar(255)
+  golongan_nama        String?   @db.VarChar(255)
+  golongan_pangkat     String?   @db.VarChar(255)
+  golongan_create_by   String?   @db.VarChar(255)
+  golongan_create_date DateTime? @db.DateTime(0)
+  golongan_status      Int?
+  golongan_p3k         String?   @db.VarChar(255)
+
+  @@index([golongan_nama, golongan_pangkat], map: "NAME")
+}
+
+model ms_golongan_p3k {
+  golongan_p3k_id          Int       @id @default(autoincrement())
+  golongan_p3k_kode        String?   @db.VarChar(255)
+  golongan_p3k_nama        String?   @db.VarChar(255)
+  golongan_p3k_create_by   Int?
+  golongan_p3k_create_date DateTime? @db.DateTime(0)
+  golongan_p3k_status      Int?
+}
+
+model ms_hari_libur {
+  hari_libur_id          Int       @id @default(autoincrement())
+  hari_libur_nama        String?   @db.VarChar(255)
+  hari_libur_tanggal     DateTime? @db.DateTime(0)
+  hari_libur_jumlah_hari Int?
+  hari_libur_create_by   Int?
+  hari_libur_create_date DateTime? @db.DateTime(0)
+  hari_libur_update_by   Int?
+  hari_libur_update_date DateTime? @db.DateTime(0)
+  hari_libur_status      Int?
+  hari_libur_old_id      Int?
+}
+
+model ms_instansi_pusat {
+  ms_instansi_pusat_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  ms_instansi_pusat_nama        String?   @db.VarChar(255)
+  ms_instansi_pusat_create_date DateTime? @db.DateTime(0)
+  ms_instansi_pusat_create_by   Int?
+  ms_instansi_pusat_status      Int?
+  ms_instansi_pusat_satker_id   String?   @db.VarChar(255)
+  ms_instansi_pusat_instansi_id String?   @db.VarChar(255)
+
+  @@index([ms_instansi_pusat_nama], map: "IDS")
+}
+
+model ms_izin {
+  izin_id          Int       @id @default(autoincrement())
+  izin_nama        String?   @db.VarChar(255)
+  izin_create_by   Int?
+  izin_create_date DateTime? @db.DateTime(0)
+  izin_update_by   Int?
+  izin_update_date DateTime? @db.DateTime(0)
+  izin_tipe        Int?
+  izin_status      Int?      @db.TinyInt
+  izin_jenis       Int?
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ms_jabatan {
+  jabatan_id              Int       @id @unique(map: "ID") @default(autoincrement())
+  jabatan_nama            String?   @db.VarChar(255)
+  jabatan_create_by       Int?
+  jabatan_create_date     DateTime? @db.DateTime(0)
+  jabatan_status          Int?
+  jabatan_tipe            Int?
+  jabatan_organization_id Int?
+  jabatan_eselon_id       Int?
+  jabatan_kepegawaian     Int?
+  jabatan_kode            String?   @db.VarChar(255)
+  jabatan_bup             Int?
+  jabatan_jenjang         String?   @db.VarChar(255)
+  jabatan_kelompok        String?   @db.VarChar(255)
+
+  @@index([jabatan_nama, jabatan_organization_id, jabatan_eselon_id, jabatan_tipe, jabatan_kepegawaian, jabatan_status], map: "NAME")
+}
+
+model ms_jenis_diklat {
+  jenis_diklat_id          Int       @id @default(autoincrement())
+  jenis_diklat             String?   @db.VarChar(255)
+  jenis_kursus_sertipikat  String?   @db.Char(3)
+  jenis_diklat_create_by   Int?
+  jenis_diklat_create_date DateTime? @db.DateTime(0)
+  jenis_diklat_update_by   Int?
+  jenis_diklat_update_date DateTime? @db.DateTime(0)
+  jenis_diklat_status      Int?
+}
+
+model ms_jenis_file {
+  file_type_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  file_type_nama        String?   @db.VarChar(255)
+  file_type_req         Int?
+  file_type_status      Int?
+  file_type_create_by   Int?
+  file_type_create_date DateTime? @db.DateTime(0)
+  file_type_update_by   Int?
+  file_type_update_date DateTime? @db.DateTime(0)
+  requirement_field     String?   @db.VarChar(255)
+
+  @@index([file_type_nama, file_type_req], map: "IDS")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ms_jenis_hukuman {
+  jenis_hukuman_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  jenis_hukuman_kode        String?   @db.VarChar(255)
+  jenis_hukuman_nama        String?   @db.VarChar(255)
+  jenis_hukuman_create_by   Int?
+  jenis_hukuman_create_date DateTime? @db.DateTime(0)
+  jenis_hukuman_status      Int?
+  jenis_tingkat_hukuman     Int?
+  jenis_hukuman_update_by   Int?
+  jenis_hukuman_update_date DateTime? @db.DateTime(0)
+
+  @@index([jenis_hukuman_nama], map: "IDS")
+}
+
+model ms_jenis_kenaikan {
+  jenis_kp_id          Int       @id @default(autoincrement())
+  jenis_kp_kode        Int?
+  jenis_kp_nama        String?   @db.VarChar(255)
+  jenis_kp_create_date DateTime? @db.DateTime(0)
+  jenis_kp_create_by   Int?
+  jenis_kp_update_date DateTime? @db.DateTime(0)
+  jenis_kp_update_by   Int?
+  jenis_kp_status      Int?
+}
+
+model ms_jenis_pemberhentian {
+  jenis_pemberhentian_id          Int       @id @default(autoincrement())
+  jenis_pemberhentian_nama        String?   @db.VarChar(255)
+  jenis_pemberhentian_status      Int?
+  jenis_pemberhentian_create_date DateTime? @db.DateTime(0)
+  jenis_pemberhentian_create_by   Int?
+  jenis_pemberhentian_update_date DateTime? @db.DateTime(0)
+  jenis_pemberhentian_update_by   Int?
+}
+
+model ms_jenis_pengadaan {
+  jenis_pengadaan_id          Int       @id @default(autoincrement())
+  jenis_pengadaan_nama        String?   @db.VarChar(255)
+  jenis_pengadaan_kode        String?   @db.VarChar(255)
+  jenis_pengadaan_create_by   Int?
+  jenis_pengadaan_create_date DateTime? @db.DateTime(0)
+  jenis_pengadaan_update_by   Int?
+  jenis_pengadaan_update_date DateTime? @db.DateTime(0)
+  jenis_pengadaan_status      Int?
+}
+
+model ms_jenis_penghargaan {
+  jenis_penghargaan_id          Int       @id @default(autoincrement())
+  jenis_penghargaan_nama        String?   @db.VarChar(255)
+  jenis_penghargaan_status      Int?
+  jenis_penghargaan_create_date DateTime? @db.DateTime(0)
+  jenis_penghargaan_create_by   Int?
+  jenis_penghargaan_update_date DateTime? @db.DateTime(0)
+  jenis_penghargaan_update_by   Int?
+}
+
+model ms_jenis_pensiun {
+  jenis_pensiun_id          Int       @id @default(autoincrement())
+  jenis_pensiun_nama        String?   @db.VarChar(255)
+  jenis_pensiun_status      Int?
+  jenis_pensiun_create_date DateTime? @db.DateTime(0)
+  jenis_pensiun_create_by   Int?
+  jenis_pensiun_update_date DateTime? @db.DateTime(0)
+  jenis_pensiun_update_by   Int?
+}
+
+model ms_jenjang {
+  jenjang_id          Int       @id @default(autoincrement())
+  jenjang_nama        String?   @db.VarChar(255)
+  jenjang_create_by   Int?
+  jenjang_create_date DateTime? @db.DateTime(0)
+  jenjang_update_by   Int?
+  jenjang_update_date DateTime? @db.DateTime(0)
+  jenjang_status      Int?
+  jenjang_fullname    String?   @db.VarChar(255)
+  jenjang_kode        String?   @db.VarChar(255)
+}
+
+model ms_kecamatan {
+  kecamatan_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  kecamatan_kota_kode   String?   @db.VarChar(255)
+  kecamatan_kode        String?   @db.VarChar(255)
+  kecamatan_nama        String?   @db.VarChar(255)
+  kecamatan_create_by   Int?
+  kecamatan_create_date DateTime? @db.DateTime(0)
+  kecamatan_status      Int?
+
+  @@index([kecamatan_kode, kecamatan_kota_kode, kecamatan_nama], map: "NAME")
+}
+
+model ms_keluarga {
+  hubungan_keluarga_id          Int       @id @default(autoincrement())
+  hubungan_keluarga_nama        String?   @db.VarChar(255)
+  hubungan_keluarga_status      Int?
+  hubungan_keluarga_create_by   Int?
+  hubungan_keluarga_create_date DateTime? @db.DateTime(0)
+
+  @@index([hubungan_keluarga_id], map: "ID")
+}
+
+model ms_kelurahan {
+  kelurahan_id             Int       @id @unique(map: "ID") @default(autoincrement())
+  kelurahan_kecamatan_kode String?   @db.VarChar(255)
+  kelurahan_kode           String?   @db.VarChar(255)
+  kelurahan_nama           String?   @db.VarChar(255)
+  kelurahan_create_by      Int?
+  kelurahan_create_date    DateTime? @db.DateTime(0)
+  kelurahan_status         Int?
+
+  @@index([kelurahan_kode, kelurahan_kecamatan_kode, kelurahan_nama], map: "NAME")
+}
+
+model ms_koordinat {
+  koordinat_id          Int       @id @default(autoincrement())
+  koordinat_org_id      Int?
+  koordinat_name        String?   @db.VarChar(255)
+  koordinat_longitude   String?   @db.VarChar(255)
+  koordinat_status      Int?
+  koordinat_create_by   Int?
+  koordinat_create_date DateTime? @db.DateTime(0)
+  koordinat_latitude    String?   @db.VarChar(255)
+  koordinat_radius      Int?
+}
+
+model ms_kota {
+  kota_id            Int       @id @unique(map: "ID") @default(autoincrement())
+  kota_provinsi_kode String?   @db.VarChar(255)
+  kota_kode          String?   @db.VarChar(255)
+  kota_nama          String?   @db.VarChar(255)
+  kota_create_by     Int?
+  kota_create_date   DateTime? @db.DateTime(0)
+  kota_status        Int?
+  kota_nama_old      String?   @db.VarChar(255)
+  kota_satker_id     String?   @db.VarChar(255)
+  kota_instansi_id   String?   @db.VarChar(255)
+
+  @@index([kota_kode, kota_provinsi_kode, kota_nama], map: "NAME")
+}
+
+model ms_latihan_struktural {
+  latihan_struktural_id Int       @id @default(autoincrement())
+  latihan_nama          String?   @db.VarChar(255)
+  latihan_status        Int?
+  latihan_create_by     Int?
+  latihan_create_date   DateTime? @db.DateTime(0)
+  latihan_update_by     Int?
+  latihan_update_date   DateTime? @db.DateTime(0)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ms_negara {
+  negara_id          Int       @id @default(autoincrement())
+  negara_type        Int?
+  negara_kode        String?   @db.VarChar(255)
+  negara_nama        String?   @db.VarChar(255)
+  negara_create_by   Int?
+  negara_create_date DateTime? @db.DateTime(0)
+  negara_status      Int?
+}
+
+model ms_organization {
+  organization_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  organization_parent_id   Int?
+  organization_name        String?   @db.VarChar(255)
+  organization_level       Int?
+  organization_create_date DateTime? @db.DateTime(0)
+  organization_create_by   Int?
+  organization_status      Int?
+  organization_telepon     String?   @db.VarChar(255)
+  organization_fax         String?   @db.VarChar(255)
+  organization_email       String?   @db.VarChar(255)
+  organization_alamat      String?   @db.VarChar(255)
+  organization_code        String?   @db.VarChar(255)
+  organization_bkn_id      String?   @db.VarChar(255)
+  organization_bkn_name    String?   @db.VarChar(255)
+
+  @@index([organization_status, organization_code, organization_name], map: "NAME")
+  @@index([organization_parent_id], map: "PARENT")
+}
+
+model ms_pensiun {
+  pensiun_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  pensiun_kode        String?   @db.VarChar(255)
+  pensiun_nama        String?   @db.VarChar(255)
+  pensiun_create_by   Int?
+  pensiun_create_date DateTime? @db.DateTime(0)
+  pensiun_status      Int?
+
+  @@index([pensiun_kode, pensiun_nama], map: "NAMA")
+}
+
+model ms_penyampaian_hukuman {
+  penyampaian_hukuman_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  penyampaian_hukuman_kode        String?   @db.VarChar(255)
+  penyampaian_hukuman_nama        String?   @db.VarChar(255)
+  penyampaian_hukuman_create_by   Int?
+  penyampaian_hukuman_create_date DateTime? @db.DateTime(0)
+  penyampaian_hukuman_status      Int?
+
+  @@index([penyampaian_hukuman_nama], map: "IDS")
+}
+
+model ms_peraturan {
+  peraturan_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  peraturan_kode        String?   @db.VarChar(255)
+  peraturan_nama        String?   @db.VarChar(255)
+  peraturan_create_by   Int?
+  peraturan_create_date DateTime? @db.DateTime(0)
+  peraturan_status      Int?
+
+  @@index([peraturan_nama], map: "IDS")
+}
+
+model ms_perilaku_kerja {
+  perilaku_kerja_id          Int       @id @default(autoincrement())
+  perilaku_kerja_aspek       String?   @db.VarChar(100)
+  perilaku_kerja_deskripsi   String?   @db.Text
+  perilaku_kerja_status      Int?
+  perilaku_kerja_create_by   Int?
+  perilaku_kerja_create_date DateTime? @db.DateTime(0)
+  perilaku_kerja_update_by   Int?
+  perilaku_kerja_update_date DateTime? @db.DateTime(0)
+}
+
+model ms_prodi {
+  prodi_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  prodi_nama        String?   @db.VarChar(255)
+  prodi_jenjang     Int?
+  prodi_create_by   Int?
+  prodi_create_date DateTime? @db.DateTime(0)
+  prodi_update_by   Int?
+  prodi_update_date DateTime? @db.DateTime(0)
+  prodi_status      Int?
+
+  @@index([prodi_nama, prodi_jenjang], map: "NAME")
+}
+
+model ms_provinsi {
+  provinsi_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  provinsi_kode        String?   @db.VarChar(255)
+  provinsi_nama        String?   @db.VarChar(255)
+  provinsi_create_by   Int?
+  provinsi_create_date DateTime? @db.DateTime(0)
+  provinsi_status      Int?
+  provinsi_satker_id   String?   @db.VarChar(255)
+  provinsi_instansi_id String?   @db.VarChar(255)
+
+  @@index([provinsi_kode, provinsi_nama], map: "NAME")
+}
+
+model ms_religion {
+  religion_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  religion_nama        String?   @db.VarChar(255)
+  religion_create_by   Int?
+  religion_create_date DateTime? @db.DateTime(0)
+  religion_status      Int?
+  religion_kode        Int?
+
+  @@index([religion_nama(length: 250)], map: "NAMA")
+}
+
+model ms_requirement {
+  requirement_id           Int       @id @unique(map: "ID") @default(autoincrement())
+  requirement_service_kode String?   @db.VarChar(255)
+  requirement_name         String?   @db.VarChar(255)
+  requirement_create_by    Int?
+  requirement_create_date  DateTime? @db.DateTime(0)
+  requirement_update_by    Int?
+  requirement_update_date  DateTime? @db.DateTime(0)
+  requirement_status       Int?
+  requirement_log_id       Int?
+  requirement_mandatory    Int?
+  requirement_file_type    Int?
+  requirement_file_insys   Int?
+  requirement_field        String?   @db.VarChar(255)
+  requirement_table        String?   @db.VarChar(255)
+  requirement_order_by     String?   @db.VarChar(255)
+
+  @@index([requirement_name, requirement_file_type, requirement_service_kode, requirement_mandatory, requirement_file_insys, requirement_status], map: "NAME")
+}
+
+model ms_rumpun_diklat {
+  rumpun_diklat_id          Int       @id @default(autoincrement())
+  rumpun_diklat_kode        String?   @db.VarChar(255)
+  rumpun_diklat_nama        String?   @db.VarChar(255)
+  rumpun_diklat_status      Int?
+  rumpun_diklat_create_by   Int?
+  rumpun_diklat_create_date DateTime? @db.DateTime(0)
+  rumpun_diklat_update_by   Int?
+  rumpun_diklat_update_date DateTime? @db.DateTime(0)
+}
+
+model ms_sekolah {
+  sekolah_id             Int       @id @default(autoincrement())
+  sekolah_npsn           String?   @db.VarChar(255)
+  sekolah_nama           String?   @db.VarChar(255)
+  sekolah_alamat         String?   @db.VarChar(255)
+  sekolah_type           Int?
+  sekolah_jenis          Int?
+  sekolah_create_by      Int?
+  sekolah_create_date    DateTime? @db.DateTime(0)
+  sekolah_status         Int?
+  sekolah_kelurahan_koed String?   @db.VarChar(255)
+  sekolah_kecamatan_kode String?   @db.VarChar(255)
+  sekolah_kabupaten_kode String?   @db.VarChar(255)
+  sekolah_provinsi_kode  String?   @db.VarChar(255)
+
+  @@index([sekolah_id], map: "ID")
+  @@index([sekolah_npsn, sekolah_nama, sekolah_type, sekolah_jenis], map: "NAME")
+}
+
+model ms_sekolah_sd {
+  sekolah_sd_id                          Int       @id @default(autoincrement())
+  sekolah_sd_npsn                        String?   @db.VarChar(255)
+  sekolah_sd_nama                        String?   @db.VarChar(255)
+  sekolah_sd_alamat                      String?   @db.VarChar(255)
+  sekolah_sd_kelurahan_id                String?   @db.VarChar(10)
+  sekolah_sd_type                        Int?
+  sekolah_sd_jenis                       String?   @db.VarChar(255)
+  sekolah_sd_sk_pendirian                String?   @db.VarChar(255)
+  sekolah_sd_tanggal_sk_pendirian        String?   @db.VarChar(255)
+  sekolah_sd_sk_izin_operasional         String?   @db.VarChar(255)
+  sekolah_sd_tanggal_sk_izin_operasional String?   @db.VarChar(255)
+  sekolah_sd_create_by                   Int?
+  sekolah_sd_create_date                 DateTime? @db.DateTime(0)
+  sekolah_sd_status                      Int?
+}
+
+model ms_sekolah_sma {
+  sekolah_sma_id                          Int       @id @default(autoincrement())
+  sekolah_sma_npsn                        String?   @db.VarChar(255)
+  sekolah_sma_nama                        String?   @db.VarChar(255)
+  sekolah_sma_alamat                      String?   @db.VarChar(255)
+  sekolah_sma_kelurahan_id                String?   @db.VarChar(10)
+  sekolah_sma_type                        Int?
+  sekolah_sma_jenis                       String?   @db.VarChar(255)
+  sekolah_sma_sk_pendirian                String?   @db.VarChar(255)
+  sekolah_sma_tanggal_sk_pendirian        String?   @db.VarChar(255)
+  sekolah_sma_sk_izin_operasional         String?   @db.VarChar(255)
+  sekolah_sma_tanggal_sk_izin_operasional String?   @db.VarChar(255)
+  sekolah_sma_create_by                   Int?
+  sekolah_sma_create_date                 DateTime? @db.DateTime(0)
+  sekolah_sma_status                      Int?
+  kab                                     String?   @db.VarChar(255)
+  kab_kode                                String?   @db.VarChar(255)
+}
+
+model ms_sekolah_smp {
+  sekolah_smp_id                          Int       @id @default(autoincrement())
+  sekolah_smp_npsn                        String?   @db.VarChar(255)
+  sekolah_smp_nama                        String?   @db.VarChar(255)
+  sekolah_smp_alamat                      String?   @db.VarChar(255)
+  sekolah_smp_kelurahan_id                String?   @db.VarChar(10)
+  sekolah_smp_type                        Int?
+  sekolah_smp_jenis                       String?   @db.VarChar(255)
+  sekolah_smp_sk_pendirian                String?   @db.VarChar(255)
+  sekolah_smp_tanggal_sk_pendirian        String?   @db.VarChar(255)
+  sekolah_smp_sk_izin_operasional         String?   @db.VarChar(255)
+  sekolah_smp_tanggal_sk_izin_operasional String?   @db.VarChar(255)
+  sekolah_smp_create_by                   Int?
+  sekolah_smp_create_date                 DateTime? @db.DateTime(0)
+  sekolah_smp_status                      Int?
+}
+
+model ms_sekolah_type {
+  sekolah_type_id          Int       @id @default(autoincrement())
+  sekolah_type_kode        String?   @db.VarChar(255)
+  sekolah_type_nama        String?   @db.VarChar(255)
+  sekolah_type_create_by   Int?
+  sekolah_type_create_date DateTime? @db.DateTime(0)
+  sekolah_type_status      Int?
+}
+
+model ms_service {
+  service_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  service_name        String?   @db.VarChar(255)
+  service_icon        String?   @db.VarChar(255)
+  service_create_date DateTime? @db.DateTime(0)
+  service_create_by   Int?
+  service_update_date DateTime? @db.DateTime(0)
+  service_update_by   Int?
+  service_status      Int?
+  service_kode        String?   @db.VarChar(255)
+
+  @@index([service_name], map: "NAMA")
+}
+
+model ms_shift {
+  shift_id          Int       @id @default(autoincrement())
+  shift_nama        String?   @db.VarChar(255)
+  shift_deskripsi   String?   @db.VarChar(255)
+  shift_create_date DateTime? @db.DateTime(0)
+  shift_create_by   Int?
+  shift_update_date DateTime? @db.DateTime(0)
+  shift_update_by   Int?
+  shift_status      Int?
+  shift_unit_id     Int?
+}
+
+model ms_shift_hari {
+  hari_id          Int       @id @default(autoincrement())
+  hari_shift_id    Int?
+  hari_ke          String?   @db.VarChar(255)
+  hari_jam_masuk   String?   @db.VarChar(255)
+  hari_jam_pulang  String?   @db.VarChar(255)
+  hari_pagi_awal   String?   @db.VarChar(255)
+  hari_pagi_akhir  String?   @db.VarChar(255)
+  hari_sore_awal   String?   @db.VarChar(255)
+  hari_sore_akhir  String?   @db.VarChar(255)
+  hari_kerja       Int?      @db.TinyInt
+  hari_create_by   Int?
+  hari_create_date DateTime? @db.DateTime(0)
+  hari_update_by   Int?
+  hari_update_date DateTime? @db.DateTime(0)
+}
+
+model ms_status_hukuman {
+  status_hukuman_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  status_hukuman_kode        String?   @db.VarChar(255)
+  status_hukuman_nama        String?   @db.VarChar(255)
+  status_hukuman_create_by   Int?
+  status_hukuman_create_date DateTime? @db.DateTime(0)
+  status_hukuman_status      Int?
+
+  @@index([status_hukuman_nama], map: "IDS")
+}
+
+model ms_univ {
+  univ_id              Int       @id @default(autoincrement())
+  univ_npsn            String?   @db.VarChar(255)
+  univ_lembaga_pembina String?   @db.VarChar(255)
+  univ_nama            String?   @db.VarChar(255)
+  univ_alamat          String?   @db.VarChar(255)
+  univ_kota_id         String?   @db.VarChar(255)
+  univ_create_by       Int?
+  univ_create_date     DateTime? @db.DateTime(0)
+  univ_status          Int?
+  prov                 String?   @db.VarChar(255)
+  univ_jenis           String?   @db.VarChar(255)
+  univ_tempat          Int?
+
+  @@unique([univ_id, univ_npsn], map: "ID")
+  @@index([univ_lembaga_pembina, univ_nama], map: "NAME")
+}
+
+model sys_config {
+  config_id          Int       @id @default(autoincrement())
+  config_code        String?   @db.VarChar(255)
+  config_name        String?   @db.VarChar(255)
+  config_value       String?   @db.VarChar(255)
+  config_create_by   Int?
+  config_create_date DateTime? @db.DateTime(0)
+  config_update_by   Int?
+  config_update_date DateTime? @db.DateTime(0)
+  config_status      Int?
+  config_log_code    String?   @db.VarChar(255)
+  config_type        Int?
+}
+
+model sys_menu {
+  menuId         Int       @id @unique(map: "menu_id") @default(autoincrement())
+  menuParentId   Int
+  menuName       String    @db.VarChar(255)
+  menuUrl        String    @db.VarChar(255)
+  menuType       Boolean
+  menuIcon       String    @db.VarChar(255)
+  menuSort       Boolean
+  menuCreateBy   Int
+  menuCreateDate DateTime  @default(now()) @db.DateTime(0)
+  menuUpdateBy   Int?
+  menuUpdateDate DateTime? @db.DateTime(0)
+  menuStatus     Boolean
+
+  @@index([menuParentId, menuType, menuSort, menuStatus], map: "menu_ids")
+  @@index([menuName, menuUrl, menuIcon], map: "menu_name")
+}
+
+model sys_notif {
+  notif_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  notif_text        String?   @db.VarChar(255)
+  notif_from        Int?
+  notif_to          Int?
+  notif_link        String?   @db.VarChar(255)
+  notif_status      Int?
+  notif_date        DateTime? @db.DateTime(0)
+  notif_data_id     Int?
+  notif_status_show Int?
+  notif_access_id   Int?
+
+  @@index([notif_from, notif_to], map: "IDS")
+}
+
+model sys_permission {
+  permissionId         Int     @id @default(autoincrement())
+  permissionRoleId     Int
+  permissionMenuId     Int
+  permissionCanRead    Boolean
+  permissionCanCreate  Boolean
+  permissionCanUpdate  Boolean
+  permissionCanDelete  Boolean
+  permissionCanApprove Boolean
+  permissionCanPrint   Boolean
+}
+
+model sys_role {
+  roleId            Int       @id @unique(map: "role_id") @default(autoincrement())
+  roleName          String    @db.VarChar(255)
+  roleDefaultMenuId Int
+  roleCreateBy      Int
+  roleCreateDate    DateTime  @default(now()) @db.DateTime(0)
+  roleUpdateBy      Int?
+  roleUpdateDate    DateTime? @db.DateTime(0)
+  roleStatus        Boolean
+
+  @@index([roleDefaultMenuId, roleStatus], map: "role_ids")
+  @@index([roleName], map: "role_name")
+}
+
+model sys_token {
+  tokenId      Int    @id @unique(map: "token_id") @default(autoincrement())
+  token        String @db.VarChar(255)
+  tokenRefresh String @db.VarChar(255)
+  tokenUserId  Int
+}
+
+model sys_user {
+  user_id              Int       @id @unique(map: "ID") @default(autoincrement())
+  user_nip             String?   @db.VarChar(255)
+  user_name            String?   @db.VarChar(255)
+  user_password        String?   @db.VarChar(255)
+  user_access_id       Int?
+  user_is_online       Int?
+  user_last_login      DateTime? @db.DateTime(0)
+  user_last_online     DateTime? @db.DateTime(0)
+  user_ip_address      String?   @db.VarChar(255)
+  user_create_by       Int?
+  user_create_date     DateTime? @db.DateTime(0)
+  user_update_by       Int?
+  user_update_date     DateTime? @db.DateTime(0)
+  user_status          Int?      @db.TinyInt
+  user_log_code        String?   @db.VarChar(255)
+  user_default_role_id Int?
+
+  @@index([user_access_id, user_default_role_id, user_status], map: "IDS")
+  @@index([user_nip, user_name], map: "NAME")
+}
+
+model sys_userrole {
+  id     Int @id @default(autoincrement())
+  userId Int
+  roleId Int
+}
+
+model token {
+  id           Int     @id @default(autoincrement())
+  token        String? @db.LongText
+  refreshToken String? @db.LongText
+  user_id      Int
+
+  @@index([user_id], map: "token_user_id_fkey")
+}
+
+model trx_absensi {
+  absensi_id          Int       @id @default(autoincrement())
+  absensi_employee_id Int?
+  absensi_tanggal     DateTime? @db.DateTime(0)
+  absensi_waktu       DateTime? @db.DateTime(0)
+  absensi_create_by   Int?
+  absensi_create_date DateTime? @db.DateTime(0)
+  absensi_koordinat   String?   @db.VarChar(255)
+  absensi_device      String?   @db.VarChar(255)
+}
+
+model trx_absensi_face {
+  absensi_face_id          Int       @id @default(autoincrement())
+  absensi_face_employee_id Int?
+  absensi_face_status      Int?
+  absensi_face_create_date DateTime? @db.DateTime(0)
+  absensi_face_create_by   Int?
+  absensi_face_update_date DateTime? @db.DateTime(0)
+  absensi_face_update_by   Int?
+}
+
+model trx_absensi_rekap {
+  rekap_id            Int       @id @default(autoincrement())
+  rekap_employee_id   Int?
+  rekap_tanggal       DateTime? @db.Date
+  rekap_hari_kerja    Int?      @db.TinyInt
+  rekap_nama_shift    String?   @db.VarChar(255)
+  rekap_jadwal_masuk  String?   @db.VarChar(255)
+  rekap_jadwal_keluar String?   @db.VarChar(255)
+  rekap_aktual_masuk  DateTime? @db.DateTime(0)
+  rekap_aktual_keluar DateTime? @db.DateTime(0)
+  rekap_terlambat     Int?
+  rekap_pulang_cepat  Int?
+  rekap_durasi_kerja  Int?
+  rekap_hadir_pagi    Int?      @db.TinyInt
+  rekap_hadir_sore    Int?      @db.TinyInt
+  rekap_izin_id       Int?
+  rekap_cuti_id       Int?
+  rekap_ket           String?   @db.VarChar(255)
+}
+
+model trx_api_token {
+  api_token_id         Int       @id @default(autoincrement())
+  api_token_device_id  Int?
+  api_token_code       String?   @db.VarChar(255)
+  api_token_valid_date DateTime? @db.DateTime(0)
+  api_token_ip_address String?   @db.VarChar(255)
+}
+
+model trx_belajar {
+  belajar_id            Int       @id @unique(map: "ID") @default(autoincrement())
+  belajar_employee_id   Int?
+  belajar_univ_id       Int?
+  belajar_prodi_id      Int?
+  belajar_nomor         String?   @db.VarChar(255)
+  belajar_pejabat       String?   @db.VarChar(255)
+  belajar_tanggal       DateTime? @db.Date
+  belajar_jenjang_id    Int?
+  belajar_lokasi        String?   @db.VarChar(255)
+  belajar_create_date   DateTime? @db.DateTime(0)
+  belajar_create_by     Int?
+  belajar_update_date   DateTime? @db.DateTime(0)
+  belajar_update_by     Int?
+  belajar_status        Int?
+  belajar_jenis         Int?
+  belajar_mulai         Int?      @db.Year
+  belajar_selesai       Int?      @db.Year
+  belajar_sponsor       String?   @db.VarChar(255)
+  belajar_file_id       Int?
+  belajar_status_proses Int?
+  belajar_ket           String?   @db.VarChar(255)
+
+  @@index([belajar_employee_id, belajar_univ_id, belajar_prodi_id, belajar_jenjang_id, belajar_lokasi, belajar_jenis, belajar_mulai, belajar_selesai, belajar_status_proses, belajar_status, belajar_file_id], map: "IDS")
+}
+
+model trx_cuti {
+  cuti_id              Int       @id @unique(map: "ID") @default(autoincrement())
+  cuti_jenis_id        Int?
+  cuti_tanggal_mulai   DateTime? @db.Date
+  cuti_tanggal_selesai DateTime? @db.Date
+  cuti_nomor           String?   @db.VarChar(255)
+  cuti_tanggal         DateTime? @db.Date
+  cuti_pejabat         String?   @db.VarChar(255)
+  cuti_anak_ke         Int?
+  cuti_employee_id     Int?
+  cuti_create_date     DateTime? @db.DateTime(0)
+  cuti_create_by       Int?
+  cuti_update_date     DateTime? @db.DateTime(0)
+  cuti_update_by       Int?
+  cuti_status          Int?
+  cuti_file_id         Int?
+
+  @@index([cuti_jenis_id, cuti_file_id], map: "IDS")
+}
+
+model trx_diklat {
+  diklat_id                 Int       @id @unique(map: "ID") @default(autoincrement())
+  diklat_employee_id        Int?
+  diklat_type_id            Int?
+  diklat_jenis_id           Int?
+  diklat_angkatan           String?   @db.VarChar(11)
+  diklat_penyelenggara      String?   @db.VarChar(255)
+  diklat_jumlah_jam         Int?
+  diklat_tanggal_mulai      DateTime? @db.Date
+  diklat_tanggal_selesai    DateTime? @db.Date
+  diklat_predikat           String?   @db.VarChar(255)
+  diklat_lokasi             String?   @db.VarChar(255)
+  diklat_nomor_sertifikat   String?   @db.VarChar(255)
+  diklat_tanggal_sertifikat DateTime? @db.Date
+  diklat_create_by          Int?
+  diklat_create_date        DateTime? @db.DateTime(0)
+  diklat_update_by          Int?
+  diklat_update_date        DateTime? @db.DateTime(0)
+  diklat_status             Int?
+  diklat_nama               String?   @db.VarChar(255)
+  diklat_file_id            Int?
+  diklat_ket                String?   @db.VarChar(255)
+  diklat_rumpun             Int?
+  diklat_nama_id            Int?
+
+  @@index([diklat_employee_id, diklat_type_id, diklat_jenis_id, diklat_penyelenggara, diklat_predikat, diklat_nomor_sertifikat, diklat_file_id, diklat_status], map: "IDS")
+}
+
+model trx_employee_cpns {
+  cpns_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  cpns_employee_id Int?
+  cpns_tmt         DateTime? @db.Date
+  cpns_tgl_sk      DateTime? @db.Date
+  cpns_no_sk       String?   @db.VarChar(255)
+  cpns_create_by   Int?
+  cpns_create_date DateTime? @db.DateTime(0)
+  cpns_update_by   Int?
+  cpns_update_date DateTime? @db.DateTime(0)
+
+  @@index([cpns_employee_id, cpns_tmt, cpns_tgl_sk, cpns_no_sk], map: "NAME")
+}
+
+model trx_employee_cpns_history {
+  cpns_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  cpns_employee_id Int?
+  cpns_tmt         DateTime? @db.Date
+  cpns_tgl_sk      DateTime? @db.Date
+  cpns_no_sk       String?   @db.VarChar(255)
+  cpns_create_by   Int?
+  cpns_create_date DateTime? @db.DateTime(0)
+  cpns_update_by   Int?
+  cpns_update_date DateTime? @db.DateTime(0)
+
+  @@index([cpns_employee_id, cpns_tmt, cpns_tgl_sk, cpns_no_sk], map: "NAME")
+}
+
+model trx_employee_file {
+  file_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  file_employee_id Int?
+  file_name        String?   @db.VarChar(255)
+  file_type        Int?
+  file_path        String?   @db.VarChar(255)
+  file_status      Int?
+  file_create_by   Int?
+  file_create_date DateTime? @db.DateTime(0)
+  file_update_by   Int?
+  file_update_date DateTime? @db.DateTime(0)
+  file_log_id      Int?
+  file_size        Float?
+  file_ext         String?   @db.VarChar(255)
+  file_ket         String?   @db.VarChar(255)
+
+  @@index([file_employee_id], map: "IDS")
+  @@index([file_name, file_type, file_path, file_ket], map: "NAME")
+}
+
+model trx_employee_pensiun {
+  trx_pensiun_id            Int       @id @unique(map: "ID") @default(autoincrement())
+  trx_pensiun_employee_id   Int?
+  trx_pensiun_pensiun_id    Int?
+  trx_pensiun_tanggal       DateTime? @db.Date
+  trx_pensiun_nomor         String?   @db.VarChar(255)
+  trx_pensiun_pejabat       String?   @db.VarChar(255)
+  trx_pensiun_status        Int?
+  trx_pensiun_create_date   DateTime? @db.DateTime(0)
+  trx_pensiun_create_by     Int?
+  trx_pensiun_update_date   DateTime? @db.DateTime(0)
+  trx_pensiun_update_by     Int?
+  trx_pensiun_file_id       Int?
+  trx_pensiun_tmt           DateTime? @db.Date
+  trx_pensiun_instansi_id   Int?
+  trx_pensiun_instansi_type Int?
+
+  @@index([trx_pensiun_employee_id, trx_pensiun_pensiun_id, trx_pensiun_file_id, trx_pensiun_instansi_id], map: "IDS")
+}
+
+model trx_employee_pns {
+  pns_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  pns_employee_id Int?
+  pns_tmt         DateTime? @db.Date
+  pns_tgl_sk      DateTime? @db.Date
+  pns_no_sk       String?   @db.VarChar(255)
+  pns_create_by   Int?
+  pns_create_date DateTime? @db.DateTime(0)
+  pns_update_by   Int?
+  pns_update_date DateTime? @db.DateTime(0)
+
+  @@index([pns_employee_id, pns_tmt, pns_tgl_sk, pns_no_sk], map: "NAME")
+}
+
+model trx_employee_pns_history {
+  pns_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  pns_employee_id Int?
+  pns_tmt         DateTime? @db.Date
+  pns_tgl_sk      DateTime? @db.Date
+  pns_no_sk       String?   @db.VarChar(255)
+  pns_create_by   Int?
+  pns_create_date DateTime? @db.DateTime(0)
+  pns_update_by   Int?
+  pns_update_date DateTime? @db.DateTime(0)
+
+  @@index([pns_employee_id, pns_tmt, pns_tgl_sk, pns_no_sk], map: "NAME")
+}
+
+model trx_employee_pppk {
+  pppk_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  pppk_employee_id Int?
+  pppk_tmt_start   DateTime? @db.Date
+  pppk_tgl_sk      DateTime? @db.Date
+  pppk_no_sk       String?   @db.VarChar(255)
+  pppk_create_by   Int?
+  pppk_create_date DateTime? @db.DateTime(0)
+  pppk_update_by   Int?
+  pppk_update_date DateTime? @db.DateTime(0)
+  pppk_tmt_end     DateTime? @db.Date
+
+  @@index([pppk_employee_id, pppk_tmt_start, pppk_tgl_sk, pppk_no_sk], map: "NAME")
+}
+
+model trx_employee_pppk_history {
+  pppk_id          Int       @id @unique(map: "ID") @default(autoincrement())
+  pppk_employee_id Int?
+  pppk_tmt_start   DateTime? @db.Date
+  pppk_tgl_sk      DateTime? @db.Date
+  pppk_no_sk       String?   @db.VarChar(255)
+  pppk_create_by   Int?
+  pppk_create_date DateTime? @db.DateTime(0)
+  pppk_update_by   Int?
+  pppk_update_date DateTime? @db.DateTime(0)
+  pppk_tmt_end     String?   @db.VarChar(255)
+
+  @@index([pppk_employee_id, pppk_tmt_start, pppk_tgl_sk, pppk_no_sk], map: "NAME")
+}
+
+model trx_hukuman {
+  hukuman_id              Int       @id @unique(map: "ID") @default(autoincrement())
+  hukuman_peraturan_id    Int?
+  hukuman_jenis_hukuman   Int?
+  hukuman_nomor_sk        String?   @db.VarChar(255)
+  hukuman_tanggal_sk      DateTime? @db.Date
+  hukuman_tanggal_berlaku DateTime? @db.Date
+  hukuman_pejabat_sk      String?   @db.VarChar(255)
+  hukuman_nama_pejabat_sk String?   @db.VarChar(255)
+  hukuman_penyampaian     Int?
+  hukuman_upaya_adm       Int?
+  hukuman_catatan         String?   @db.VarChar(255)
+  hukuman_create_date     DateTime? @db.DateTime(0)
+  hukuman_create_by       Int?
+  hukuman_update_date     DateTime? @db.DateTime(0)
+  hukuman_update_by       Int?
+  hukuman_status          Int?
+  hukuman_file_id         Int?
+  hukuman_employee_id     Int?
+  hukuman_status_hukuman  Int?
+  hukuman_alasan_id       Int?
+
+  @@index([hukuman_peraturan_id, hukuman_jenis_hukuman, hukuman_tanggal_berlaku, hukuman_penyampaian, hukuman_upaya_adm, hukuman_status_hukuman, hukuman_employee_id, hukuman_status, hukuman_file_id], map: "IDS")
+}
+
+model trx_inc_no {
+  trx_inc_no_id         Int  @id @unique(map: "ID") @default(autoincrement())
+  trx_inc_no_service_id Int?
+  trx_inc_no_value      Int?
+  trx_inc_no_year       Int? @db.Year
+  trx_inc_no_gol        Int?
+
+  @@index([trx_inc_no_service_id, trx_inc_no_value, trx_inc_no_year, trx_inc_no_gol], map: "IDS")
+}
+
+model trx_informal {
+  trx_informal_id                  Int       @id @unique(map: "ID") @default(autoincrement())
+  trx_informal_employee_id         Int?
+  trx_informal_nama                String?   @db.VarChar(255)
+  trx_informal_mulai               DateTime? @db.Date
+  trx_informal_selesai             DateTime? @db.Date
+  trx_informal_lokasi              String?   @db.VarChar(255)
+  trx_informal_tempat              Int?
+  trx_informal_penyelenggara       String?   @db.VarChar(255)
+  trx_informal_jam_pelajaran       Int?
+  trx_informal_jenis               Int?
+  trx_informal_file_id             Int?
+  trx_informal_create_date         DateTime? @db.DateTime(0)
+  trx_informal_create_by           Int?
+  trx_informal_update_date         DateTime? @db.DateTime(0)
+  trx_informal_update_by           Int?
+  trx_informal_status              Int?
+  trx_informal_penerbit_sertifikat String?   @db.VarChar(255)
+  trx_informal_nomor_sertifikat    String?   @db.VarChar(255)
+  trx_informal_tanggal_sertifikat  DateTime? @db.Date
+  trx_informal_ket                 String?   @db.VarChar(255)
+
+  @@index([trx_informal_employee_id, trx_informal_nama, trx_informal_mulai, trx_informal_selesai, trx_informal_lokasi, trx_informal_jenis, trx_informal_status, trx_informal_file_id], map: "IDS")
+}
+
+model trx_izin {
+  izin_id          Int       @id @default(autoincrement())
+  izin_employee_id Int?
+  izin_start_date  DateTime? @db.Date
+  izin_end_date    DateTime? @db.Date
+  izin_izin_id     Int?
+  izin_status      Int?
+  izin_create_date DateTime? @db.DateTime(0)
+  izin_create_by   Int?
+  izin_update_date DateTime? @db.DateTime(0)
+  izin_update_by   Int?
+  izin_file_path   String?   @db.VarChar(255)
+  izin_ket         String?   @db.LongText
+}
+
+model trx_jabatan {
+  trx_jabatan_id                   Int       @id @unique(map: "ID") @default(autoincrement())
+  trx_jabatan_employee_id          Int?
+  trx_jabatan_jabatan_id           Int?
+  trx_jabatan_organization_id      Int?
+  trx_jabatan_tmt                  DateTime? @db.Date
+  trx_jabatan_nomor_sk             String?   @db.VarChar(255)
+  trx_jabatan_tgl_sk               DateTime? @db.Date
+  trx_jabatan_create_date          DateTime? @db.DateTime(0)
+  trx_jabatan_create_by            Int?
+  trx_jabatan_update_date          DateTime? @db.DateTime(0)
+  trx_jabatan_update_by            Int?
+  trx_jabatan_status               Int?
+  trx_jabatan_jenis_sk             Int?
+  trx_jabatan_angka_kredit         Int?
+  trx_jabatan_pejabat_sk           String?   @db.VarChar(255)
+  trx_jabatan_status_jabatan       Int?
+  trx_jabatan_jabatan_nama         String?   @db.VarChar(255)
+  trx_jabatan_jabatan_eselon       Int?
+  trx_jabatan_jabatan_organization String?   @db.VarChar(255)
+  trx_jabatan_file_id              Int?
+  trx_jabatan_instansi_type        Int?
+  trx_jabatan_instansi             Int?
+  trx_jabatan_ket                  String?   @db.VarChar(255)
+  trx_jabatan_type                 Int?
+  trx_jabatan_sampai               DateTime? @db.Date
+  trx_jabatan_bkn                  String?   @db.VarChar(255)
+  trx_jabatan_file_spp             Int?
+  trx_jabatan_file_ba              Int?
+
+  @@index([trx_jabatan_employee_id, trx_jabatan_jabatan_id, trx_jabatan_organization_id, trx_jabatan_tmt, trx_jabatan_file_id, trx_jabatan_status, trx_jabatan_jenis_sk, trx_jabatan_status_jabatan, trx_jabatan_type, trx_jabatan_sampai, trx_jabatan_instansi_type, trx_jabatan_instansi], map: "IDS")
+}
+
+model trx_submission {
+  submission_id               Int       @id @unique(map: "ID") @default(autoincrement())
+  submission_employee_id      String?   @db.VarChar(255)
+  submission_service_id       Int?
+  submission_create_by        Int?
+  submission_create_date      DateTime? @db.DateTime(0)
+  submission_update_by        Int?
+  submission_update_date      DateTime? @db.DateTime(0)
+  submission_status           Int?
+  submission_kgb_lama         Int?
+  submission_kgb_baru         Int?
+  submission_kgb_tmt          DateTime? @db.Date
+  submission_kgb_berikutnya   DateTime? @db.Date
+  submission_kgb_maker_tahun  Int?      @db.TinyInt
+  submission_ib_rekom         String?   @db.VarChar(255)
+  submission_ib_rekom_no      String?   @db.VarChar(255)
+  submission_ib_rekom_tanggal DateTime? @db.Date
+  submission_ib_univ          Int?
+  submission_cuti             Int?
+  submission_cuti_start       DateTime? @db.Date
+  submission_cuti_end         DateTime? @db.Date
+  submission_ib_prodi         Int?
+  submission_ib_jenjang       Int?
+  submission_kgb_maker_bulan  Int?      @db.TinyInt
+  submission_kgb_golongan_id  Int?
+  submission_cuti_jumlah      Int?
+  submission_ket              String?   @db.LongText
+  submission_file_id          Int?
+  submission_penghargaan_id   Int?
+  submission_ib_mulai         Int?      @db.Year
+  submission_ib_selesai       Int?      @db.Year
+  submission_ib_status_proses Int?
+  submission_ib_sponsor       String?   @db.VarChar(255)
+  submission_ib_lokasi        String?   @db.VarChar(255)
+  submission_ib_fakultas      String?   @db.VarChar(255)
+  submission_data_id          Int?
+  submission_data_nomor       Int?
+
+  @@index([submission_employee_id, submission_service_id, submission_file_id, submission_status, submission_ib_prodi, submission_ib_jenjang, submission_kgb_golongan_id, submission_ib_univ, submission_cuti, submission_penghargaan_id, submission_data_id, submission_data_nomor], map: "IDS")
+}
+
+model trx_submission_file {
+  file_id             Int       @id @unique(map: "ID") @default(autoincrement())
+  file_name           String?   @db.VarChar(255)
+  file_requirement_id Int?
+  file_path           String?   @db.VarChar(255)
+  file_status         Int?
+  file_create_by      Int?
+  file_create_date    DateTime? @db.DateTime(0)
+  file_update_by      Int?
+  file_update_date    DateTime? @db.DateTime(0)
+  file_log_id         Int?
+  file_size           Float?
+  file_ext            String?   @db.VarChar(255)
+  file_submission_id  Int?
+  file_ket            String?   @db.VarChar(255)
+
+  @@index([file_submission_id], map: "IDS")
+  @@index([file_name, file_requirement_id, file_path, file_ket], map: "NAME")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model trx_tukin_disiplin {
+  disiplin_id                 Int       @id @default(autoincrement())
+  disiplin_employee_id        Int?
+  disiplin_periode            DateTime? @db.Date
+  disiplin_besaran            Decimal?  @db.Decimal(10, 2)
+  disiplin_besaran_hari       Decimal?  @db.Decimal(10, 2)
+  disiplin_tidak_hadir        Int?
+  disiplin_tidak_hadir_nilai  Decimal?  @db.Decimal(10, 2)
+  disiplin_terlambat          Int?
+  disiplin_terlambat_nilai    Decimal?  @db.Decimal(10, 2)
+  disiplin_pulang_cepat       Int?
+  disiplin_pulang_cepat_nilai Decimal?  @db.Decimal(10, 2)
+  disiplin_tap                Int?
+  disiplin_tap_nilai          Decimal?  @db.Decimal(10, 2)
+  disiplin_tas                Int?
+  disiplin_tas_nilai          Decimal?  @db.Decimal(10, 2)
+  disiplin_sanksi             Int?
+  disiplin_sanksi_nilai       Decimal?  @db.Decimal(10, 2)
+  disiplin_hukuman_id         Int?
+  disiplin_jumlah             Decimal?  @db.Decimal(10, 2)
+  disiplin_total              Decimal?  @db.Decimal(10, 2)
+  disiplin_create_date        DateTime? @db.DateTime(0)
+  disiplin_create_by          Int?
+  disiplin_update_date        DateTime? @db.DateTime(0)
+  disiplin_update_by          Int?
+  disiplin_status             Int?
+}
+
+model trx_tukin_kinerja {
+  kinerja_id          Int       @id @default(autoincrement())
+  kinerja_employee_id Int?
+  kinerja_periode     DateTime? @db.Date
+  kinerja_besaran     Decimal?  @db.Decimal(10, 2)
+  kinerja_predikat    String?   @db.VarChar(255)
+  kinerja_nilai       Decimal?  @db.Decimal(10, 2)
+  kinerja_total       Decimal?  @db.Decimal(10, 2)
+  kinerja_create_date DateTime? @db.DateTime(0)
+  kinerja_create_by   Int?
+  kinerja_update_date DateTime? @db.DateTime(0)
+  kinerja_update_by   Int?
+  kinerja_status      Int?
+}
+
+model trx_tukin_rekap {
+  rekap_id               Int       @id @default(autoincrement())
+  rekap_employee_id      Int?
+  rekap_periode          DateTime? @db.Date
+  rekap_besaran          Decimal?  @db.Decimal(10, 2)
+  rekap_besaran_hari     Decimal?  @db.Decimal(10, 2)
+  rekap_kinerja          Decimal?  @db.Decimal(10, 2)
+  rekap_disiplin         Decimal?  @db.Decimal(10, 2)
+  rekap_hadiah_peringkat Int?
+  rekap_hadiah_nilai     Decimal?  @db.Decimal(10, 2)
+  rekap_hukuman          Int?
+  rekap_hukuman_nilai    Decimal?  @db.Decimal(10, 2)
+  rekap_cuti             Int?
+  rekap_cuti_nilai       Decimal?  @db.Decimal(10, 2)
+  rekap_jumlah           Decimal?  @db.Decimal(10, 2)
+  rekap_pph_persen       Float?    @db.Float
+  rekap_pph_nilai        Decimal?  @db.Decimal(10, 2)
+  rekap_total            Decimal?  @db.Decimal(10, 2)
+  rekap_create_date      DateTime? @db.DateTime(0)
+  rekap_create_by        Int?
+  rekap_update_by        DateTime? @db.DateTime(0)
+  rekap_update_date      DateTime? @db.DateTime(0)
+  rekap_status           Int?
+}

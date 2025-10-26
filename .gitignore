@@ -3,8 +3,10 @@ dist/
 build/
 staging_data/
 temp_downloads/
+record_data_to_review/
 *.log
 *.txt
 .vscode/
 .idea/
 .git/
+*.env
