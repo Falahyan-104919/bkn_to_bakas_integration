@@ -1,0 +1,10 @@
+node_modules/
+dist/
+build/
+staging_data/
+temp_downloads/
+*.log
+*.txt
+.vscode/
+.idea/
+.git/
