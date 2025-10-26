@@ -10,3 +10,4 @@ record_data_to_review/
 .idea/
 .git/
 *.env
+.DS_Store
