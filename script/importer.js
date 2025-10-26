@@ -9,13 +9,13 @@ const logger = require("./logger");
 const prisma = new PrismaClient();
 
 // --- CONFIGURATION ---
-const STAGING_DATA_DIR = path.join(__dirname, "staging_data");
-const STAGING_FILES_DIR = path.join(__dirname, "temp_downloads");
+const STAGING_DATA_DIR = path.join(__dirname, "..", "staging_data");
+const STAGING_FILES_DIR = path.join(__dirname, "..", "temp_downloads");
 const SUPERADMIN_ID = 1;
 const STATUS_SYNC_BKN = 3;
 
 // --- TODO: 2. SET YOUR PRODUCTION FILE PATH ---
-const FINAL_FILE_DESTINATION_BASE = "/home/aptika/assets/upload";
+const FINAL_FILE_DESTINATION_BASE = "/home/aptika/sinetron-back/assets/upload";
 
 // --- TODO: 3. SET BKN 'dok_id' TO LOCAL 'fileKey' MAPPING ---
 const BKN_DOC_ID_TO_FILE_KEY = {
