@@ -10,4 +10,5 @@ record_data_to_review/
 .idea/
 .git/
 *.env
+*.csv
 .DS_Store

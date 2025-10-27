@@ -99,6 +99,19 @@ function findJabatanKode(record) {
   }
 }
 
+function findJabatanJenjang(record) {
+  switch (record.jenisJabatan) {
+    case "1":
+      return 3;
+    case "2":
+      return 2;
+    case "4":
+      return 1;
+    default:
+      return null;
+  }
+}
+
 /**
  * Cleans a string to be used in a filename.
  * @param {string} name
@@ -170,6 +183,7 @@ async function processNip(nip) {
       }
 
       const jabatanKode = findJabatanKode(record);
+      const jabatanJenjang = findJabatanJenjang(record);
       const jabatan = jabatanKode
         ? await prisma.ms_jabatan.findFirst({
             where: {
@@ -179,22 +193,12 @@ async function processNip(nip) {
           })
         : null;
 
-      if (!jabatan) {
-        throw new Error(`Jabatan ${jabatanKode} not found in local ms_jabatan`);
-      }
-
       const organization = await prisma.ms_organization.findFirst({
         where: {
           organization_bkn_id: record.unorId,
           organization_status: { notIn: [0] },
         },
       });
-
-      if (!organization) {
-        throw new Error(
-          `Organization ${record.unorId} not found in local ms_organization`,
-        );
-      }
 
       // --- 2. PREPARE JABATAN DATA (The 'payload' for create/update) ---
       const parsedTmtJabatan = parseDate(record.tmtJabatan);
@@ -221,7 +225,7 @@ async function processNip(nip) {
           ? record.namaUnor
           : null,
         trx_jabatan_file_ba: null,
-        trx_jabatan_type: 1,
+        trx_jabatan_type: jabatanJenjang,
 
         ...(record.satuanKerjaId === "A5EB03E241B3F6A0E040640A040252AD" && {
           trx_jabatan_instansi_type: 3,
@@ -345,42 +349,24 @@ async function processNip(nip) {
           },
         };
 
-        const existingJabatan = await tx.trx_jabatan.findUnique({
+        await tx.trx_jabatan.upsert({
           where: uniqueWhere,
+          update: {
+            ...dataPayload,
+            ...fileIdsToLink,
+          },
+          create: {
+            ...dataPayload,
+            trx_jabatan_employee_id: employee.employee_id,
+            trx_jabatan_tmt: parsedTmtJabatan,
+            trx_jabatan_create_date: new Date(),
+            trx_jabatan_create_by: SUPERADMIN_ID,
+            ...fileIdsToLink,
+          },
         });
-
-        if (existingJabatan) {
-          // --- UPDATE PATH (NOW FIXED) ---
-          logger.warn(
-            `[UPDATE] Record found for NIP ${nip} / TMT ${record.tmtJabatan}. Updating metadata AND file links.`,
-          );
-
-          await tx.trx_jabatan.update({
-            where: { trx_jabatan_id: existingJabatan.trx_jabatan_id },
-            data: {
-              ...dataPayload,
-              ...fileIdsToLink, // <-- THE FIX: Add the new file IDs
-              // Add any "updated_by" or "updated_at" fields here
-            },
-          });
-        } else {
-          // --- CREATE PATH (Still correct) ---
-          logger.info(
-            `[CREATE] New record for NIP ${nip} / TMT ${record.tmtJabatan}. Creating...`,
-          );
-
-          // Now, create the jabatan record
-          await tx.trx_jabatan.create({
-            data: {
-              ...dataPayload,
-              trx_jabatan_employee_id: employee.employee_id,
-              trx_jabatan_tmt: parsedTmtJabatan,
-              trx_jabatan_create_date: new Date(),
-              trx_jabatan_create_by: SUPERADMIN_ID,
-              ...fileIdsToLink, // Link the newly created file IDs
-            },
-          });
-        }
+        logger.info(
+          `[UPSERT] Upserted record for NIP ${nip} / TMT ${record.tmtJabatan}.`,
+        );
       }); // --- END TRANSACTION ---
 
       // --- 5. MOVE FILES (Post-Transaction) ---
