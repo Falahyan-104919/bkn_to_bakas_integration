@@ -393,7 +393,7 @@ async function processNip(nip) {
             trx_jabatan_employee_id: employee.employee_id,
             trx_jabatan_tmt: parsedTmtJabatan,
             trx_jabatan_create_date: new Date(),
-            trx_jabatan_create_by: SUPERADMIN_ID,
+            trx_jabatan_create_by: 0,
             ...fileIdsToLink,
           },
         });
