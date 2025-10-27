@@ -1304,6 +1304,7 @@ model trx_jabatan {
   trx_jabatan_file_spp             Int?
   trx_jabatan_file_ba              Int?
 
+  @@unique([trx_jabatan_employee_id, trx_jabatan_tmt], map: "uniq_employee_tmt")
   @@index([trx_jabatan_employee_id, trx_jabatan_jabatan_id, trx_jabatan_organization_id, trx_jabatan_tmt, trx_jabatan_file_id, trx_jabatan_status, trx_jabatan_jenis_sk, trx_jabatan_status_jabatan, trx_jabatan_type, trx_jabatan_sampai, trx_jabatan_instansi_type, trx_jabatan_instansi], map: "IDS")
 }
 
