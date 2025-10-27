@@ -346,7 +346,7 @@ async function processNip(nip) {
           );
 
           await tx.trx_jabatan.update({
-            where: { id: existingJabatan.id },
+            where: { trx_jabatan_id: existingJabatan.id },
             data: {
               ...dataPayload,
               ...fileIdsToLink, // <-- THE FIX: Add the new file IDs
