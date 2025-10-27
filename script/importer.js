@@ -126,6 +126,19 @@ function sanitizeFileName(name) {
 }
 
 /**
+ * Returns true when the value is null/undefined or a string that trims to empty.
+ * @param {*} value
+ * @returns {boolean}
+ */
+function isBlank(value) {
+  return (
+    value === null ||
+    value === undefined ||
+    (typeof value === "string" && value.trim() === "")
+  );
+}
+
+/**
  * Processes a single staging JSON file identified by NIP.
  * @param {string} nip
  * @returns {Promise<boolean>} true when the file existed and was processed
@@ -171,6 +184,26 @@ async function processNip(nip) {
     const fileMoveOps = [];
 
     try {
+      if (
+        isBlank(record.unorId) &&
+        isBlank(record.namaUnor) &&
+        isBlank(record.unorIndukId) &&
+        isBlank(record.unorIndukNama) &&
+        isBlank(record.jabatanFungsionalId) &&
+        isBlank(record.jabatanFungsionalNama) &&
+        isBlank(record.jabatanFungsionalUmumId) &&
+        isBlank(record.jabatanFungsionalUmumNama) &&
+        isBlank(record.namaJabatan) &&
+        isBlank(record.nomorSk) &&
+        isBlank(record.tanggalSk) &&
+        isBlank(record.namaUnor)
+      ) {
+        logger.warn(
+          `[SKIP] Record ${record.id} (NIP ${nip}) missing jabatan/organization metadata. Skipping.`,
+        );
+        continue;
+      }
+
       // --- 1. GATHER DATA (Lookups) ---
       const employee = await prisma.ms_employee.findFirst({
         where: {
