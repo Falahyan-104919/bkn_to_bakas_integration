@@ -202,7 +202,7 @@ async function processNip(nip) {
         trx_jabatan_nomor_sk: record.nomorSk,
         trx_jabatan_tgl_sk: parseDate(record.tanggalSk),
         trx_jabatan_status: STATUS_SYNC_BKN,
-        trx_jabatan_jenis_sk: 1,
+        trx_jabatan_jenis_sk: 3,
         trx_jabatan_pejabat_sk: null,
         trx_jabatan_status_jabatan: 1,
         trx_jabatan_jabatan_nama: !jabatan ? record.namaJabatan : null,
