@@ -159,7 +159,7 @@ async function processNip(nip) {
 
     try {
       // --- 1. GATHER DATA (Lookups) ---
-      const employee = await prisma.ms_employee.findFirstOrThrow({
+      const employee = await prisma.ms_employee.findFirst({
         where: {
           employee_nip: record.nipBaru,
           employee_status: { notIn: [0] },
@@ -179,12 +179,22 @@ async function processNip(nip) {
           })
         : null;
 
-      const organization = await prisma.ms_organization.findFirstOrThrow({
+      if (!jabatan) {
+        throw new Error(`Jabatan ${jabatanKode} not found in local ms_jabatan`);
+      }
+
+      const organization = await prisma.ms_organization.findFirst({
         where: {
           organization_bkn_id: record.unorId,
           organization_status: { notIn: [0] },
         },
       });
+
+      if (!organization) {
+        throw new Error(
+          `Organization ${record.unorId} not found in local ms_organization`,
+        );
+      }
 
       // --- 2. PREPARE JABATAN DATA (The 'payload' for create/update) ---
       const parsedTmtJabatan = parseDate(record.tmtJabatan);
