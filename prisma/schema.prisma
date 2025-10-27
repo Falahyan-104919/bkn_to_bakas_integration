@@ -1116,6 +1116,7 @@ model trx_employee_file {
   file_ext         String?   @db.VarChar(255)
   file_ket         String?   @db.VarChar(255)
 
+  @@unique([file_employee_id, file_type], map: "uniq_employee_type")
   @@index([file_employee_id], map: "IDS")
   @@index([file_name, file_type, file_path, file_ket], map: "NAME")
 }
