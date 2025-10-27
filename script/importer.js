@@ -329,8 +329,10 @@ async function processNip(nip) {
 
         // --- Now, find the existing jabatan ---
         const uniqueWhere = {
-          trx_jabatan_employee_id: employee.employee_id,
-          trx_jabatan_tmt: parsedTmtJabatan,
+          trx_jabatan_employee_id_trx_jabatan_tmt: {
+            trx_jabatan_employee_id: employee.employee_id,
+            trx_jabatan_tmt: parsedTmtJabatan,
+          },
         };
 
         const existingJabatan = await tx.trx_jabatan.findUnique({
