@@ -95,61 +95,80 @@ async function fetchAndSaveAllData(
 ) {
   const jsonFilePath = path.join(STAGING_DIR, `${nip}.json`);
 
-  // --- 1. JSON "Resume" Logic ---
+  // --- 1. JSON Handling ---
+  let historyRecords = null;
+
   if (!forceJsonRefresh) {
     try {
-      await fs.access(jsonFilePath);
-      logger.warn(`[SKIP] ${nip}.json already exists. Skipping NIP.`);
-      return; // This skips both JSON and file downloads
+      const existingJson = await fs.readFile(jsonFilePath, "utf-8");
+      const parsed = JSON.parse(existingJson);
+      if (parsed && Array.isArray(parsed.data)) {
+        historyRecords = parsed.data;
+        logger.info(`[JSON CACHE] Using cached ${nip}.json.`);
+      } else {
+        logger.warn(
+          `[JSON CACHE] Cached ${nip}.json missing 'data' array. Fetching from API.`,
+        );
+      }
     } catch (e) {
-      // File does not exist, proceed.
+      if (e.code !== "ENOENT") {
+        logger.warn(
+          `[JSON CACHE] Unable to read cached ${nip}.json (${e.message}). Fetching from API.`,
+        );
+      }
     }
   } else {
     try {
-      await fs.access(jsonFilePath);
-      logger.info(
-        `[REFRESH JSON] Removing existing ${nip}.json before refetch.`,
-      );
       await fs.unlink(jsonFilePath);
+      logger.info(
+        `[REFRESH JSON] Removed existing ${nip}.json before refetch.`,
+      );
     } catch (e) {
-      // File might not exist, ignore.
+      if (e.code !== "ENOENT") {
+        logger.warn(
+          `[REFRESH JSON] Failed removing cached ${nip}.json (${e.message}).`,
+        );
+      }
     }
   }
 
-  // --- 2. Fetch and Save JSON ---
-  let historyRecords; // We need this for Step 3
+  const needsJsonFetch = historyRecords === null;
+
+  // --- 2. Fetch and Save JSON when needed ---
   const makeAuthHeaders = (token) => ({
     accept: "application/json",
     Authorization: `Bearer ${token}`,
     Auth: `Bearer ${staticToken}`,
   });
 
-  try {
-    logger.info(`[FETCH JSON] Fetching history for ${nip}...`);
-    const url = `${API_BASE_URL}/jabatan/pns/${nip}`;
-    const response = await withTokenRetry(
-      (token) => axios.get(url, { headers: makeAuthHeaders(token) }),
-      tokenRef,
-      `JSON fetch for ${nip}`,
-    );
+  if (needsJsonFetch) {
+    try {
+      logger.info(`[FETCH JSON] Fetching history for ${nip}...`);
+      const url = `${API_BASE_URL}/jabatan/pns/${nip}`;
+      const response = await withTokenRetry(
+        (token) => axios.get(url, { headers: makeAuthHeaders(token) }),
+        tokenRef,
+        `JSON fetch for ${nip}`,
+      );
 
-    const data = response.data;
-    await fs.writeFile(jsonFilePath, JSON.stringify(data, null, 2));
-    logger.info(`[SAVE JSON] Successfully saved ${nip}.json`);
+      const data = response.data;
+      await fs.writeFile(jsonFilePath, JSON.stringify(data, null, 2));
+      logger.info(`[SAVE JSON] Successfully saved ${nip}.json`);
 
-    historyRecords = data.data; // Get the array for the next step
-
-    if (!historyRecords || !Array.isArray(historyRecords)) {
-      logger.warn(`[PARSE] No history records array found for ${nip}.`);
-      return; // No files to download
+      historyRecords = data.data;
+    } catch (error) {
+      let errorMsg = error.message;
+      if (error.response) {
+        errorMsg = `Status ${error.response.status}: ${JSON.stringify(error.response.data)}`;
+      }
+      logger.error(`[FAIL JSON] Failed to process ${nip}: ${errorMsg}`);
+      return; // Stop processing this NIP if JSON fails
     }
-  } catch (error) {
-    let errorMsg = error.message;
-    if (error.response) {
-      errorMsg = `Status ${error.response.status}: ${JSON.stringify(error.response.data)}`;
-    }
-    logger.error(`[FAIL JSON] Failed to process ${nip}: ${errorMsg}`);
-    return; // Stop processing this NIP if JSON fails
+  }
+
+  if (!historyRecords || !Array.isArray(historyRecords)) {
+    logger.warn(`[PARSE] No history records array found for ${nip}.`);
+    return;
   }
 
   // --- 3. Download Associated Files ---
