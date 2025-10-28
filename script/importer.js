@@ -16,6 +16,7 @@ const STATUS_SYNC_BKN = 3;
 
 // --- TODO: 2. SET YOUR PRODUCTION FILE PATH ---
 const FINAL_FILE_DESTINATION_BASE = "/home/aptika/sinetron-back/assets/upload";
+const DEFAULT_DATASET_FILENAME = "1-final.json";
 
 // --- TODO: 3. SET BKN 'dok_id' TO LOCAL 'fileKey' MAPPING ---
 const BKN_DOC_ID_TO_FILE_KEY = {
@@ -149,49 +150,44 @@ function isBlank(value) {
   );
 }
 
+function normalizeNip(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof value === "number") {
+    return String(value);
+  }
+  return null;
+}
+
+function resolveRecordNip(record) {
+  return (
+    record?.nipBaru ??
+    record?.nip ??
+    record?.employee_nip ??
+    record?.employeeNip ??
+    record?.nipbaru ??
+    null
+  );
+}
+
 /**
- * Processes a single staging JSON file identified by NIP.
+ * Processes an array of records for a given NIP.
  * @param {string} nip
- * @returns {Promise<boolean>} true when the file existed and was processed
+ * @param {Array<object>} records
+ * @returns {Promise<boolean>}
  */
-async function processNip(nip) {
-  const filePath = path.join(STAGING_DATA_DIR, `${nip}.json`);
-
-  let fileContent;
-  try {
-    fileContent = await fsp.readFile(filePath, "utf-8");
-  } catch (err) {
-    logger.error(
-      `[FAIL] Unable to read staging file for NIP ${nip}: ${err.message}`,
-    );
+async function processRecordsForNip(nip, records) {
+  if (!records || !Array.isArray(records) || records.length === 0) {
+    logger.warn(`No history records found or data is not an array for NIP: ${nip}`);
     return false;
   }
 
-  let bknHistoryRecords;
-  try {
-    bknHistoryRecords = JSON.parse(fileContent).data;
-  } catch (err) {
-    logger.error(
-      `[FAIL] Invalid JSON structure for NIP ${nip}: ${err.message}`,
-    );
-    return false;
-  }
+  logger.info(`Processing NIP: ${nip} (${records.length} records)`);
 
-  if (
-    !bknHistoryRecords ||
-    !Array.isArray(bknHistoryRecords) ||
-    bknHistoryRecords.length === 0
-  ) {
-    logger.warn(
-      `No history records found or data is not an array for NIP: ${nip}`,
-    );
-    return false;
-  }
-
-  logger.info(`Processing NIP: ${nip} (${bknHistoryRecords.length} records)`);
-
-  for (const record of bknHistoryRecords) {
-    // This will hold { sourcePath, finalFilePath } for moving files *after* the TX
+  for (const record of records) {
     const fileMoveOps = [];
 
     try {
@@ -215,7 +211,6 @@ async function processNip(nip) {
         continue;
       }
 
-      // --- 1. GATHER DATA (Lookups) ---
       const employee = await prisma.ms_employee.findFirst({
         where: {
           employee_nip: record.nipBaru,
@@ -244,7 +239,6 @@ async function processNip(nip) {
         },
       });
 
-      // --- 2. PREPARE JABATAN DATA (The 'payload' for create/update) ---
       const parsedTmtJabatan = parseDate(record.tmtJabatan);
       if (!parsedTmtJabatan) {
         logger.warn(
@@ -277,14 +271,12 @@ async function processNip(nip) {
         }),
       };
 
-      // --- 3. PREPARE FILE DATA (Pre-Transaction) ---
-      // This holds the data for creating new 'trx_employee_file' records
       const fileCreateDataMap = new Map();
 
-      if (record.path) {
+      if (record.path && typeof record.path === "object") {
         for (const [docKey, fileInfo] of Object.entries(record.path)) {
           const fileKeyName = BKN_DOC_ID_TO_FILE_KEY[docKey];
-          if (!fileKeyName) continue; // Skip unmapped files
+          if (!fileKeyName) continue;
 
           if (
             !fileInfo ||
@@ -318,7 +310,6 @@ async function processNip(nip) {
             continue;
           }
 
-          // --- TODO: 4. MODIFY YOUR FILE NAMING LOGIC HERE ---
           const jabatanNamaPart = sanitizeFileName(record.namaJabatan);
           const dateString = parseDate(record.tanggalSk) || new Date();
           const datePart = `${String(dateString.getDate()).padStart(2, "0")}${String(dateString.getMonth() + 1).padStart(2, "0")}${String(dateString.getFullYear()).slice(2)}`;
@@ -327,7 +318,6 @@ async function processNip(nip) {
           const newFilename = `${nip}_${jabatanNamaPart}_${datePart}_${fileKeyPart}.pdf`;
           const finalDirPath = path.join(FINAL_FILE_DESTINATION_BASE, nip);
           const finalFilePath = path.join(finalDirPath, newFilename);
-          // --- End of TODO section ---
 
           const fileMapping = LOCAL_FILE_KEY_MAPPING[fileKeyName];
           if (!fileMapping) {
@@ -338,7 +328,6 @@ async function processNip(nip) {
           }
           const stats = await fsp.stat(sourcePath);
 
-          // Store the data needed to create this file record
           fileCreateDataMap.set(fileKeyName, {
             fileMapping: fileMapping,
             createData: {
@@ -354,12 +343,10 @@ async function processNip(nip) {
             },
           });
 
-          // Store the operation to move the file after the transaction
           fileMoveOps.push({ sourcePath, finalFilePath, finalDirPath });
         }
       }
 
-      // --- 4. START TRANSACTION ---
       await prisma.$transaction(async (tx) => {
         const uniqueWhere = {
           trx_jabatan_employee_id_trx_jabatan_tmt: {
@@ -408,19 +395,18 @@ async function processNip(nip) {
         logger.info(
           `[UPSERT] Upserted record for NIP ${nip} / TMT ${record.tmtJabatan}.`,
         );
-      }); // --- END TRANSACTION ---
+      });
 
-      // --- 5. MOVE FILES (Post-Transaction) ---
       for (const op of fileMoveOps) {
+        await fsp.mkdir(op.finalDirPath, { recursive: true });
         if (fs.existsSync(op.finalFilePath)) {
+          await fsp.unlink(op.finalFilePath);
           logger.warn(
-            `[FILE_MOVE] File already exists, skipping move: ${op.finalFilePath}`,
+            `[FILE_MOVE] Existing file replaced at: ${op.finalFilePath}`,
           );
-        } else {
-          await fsp.mkdir(op.finalDirPath, { recursive: true });
-          await fsp.rename(op.sourcePath, op.finalFilePath); // Use rename (move)
-          logger.info(`[FILE_MOVE] Moved file to: ${op.finalFilePath}`);
         }
+        await fsp.rename(op.sourcePath, op.finalFilePath);
+        logger.info(`[FILE_MOVE] Moved file to: ${op.finalFilePath}`);
       }
 
       logger.info(`[SUCCESS] Processed record ${record.id} for NIP ${nip}`);
@@ -428,26 +414,211 @@ async function processNip(nip) {
       logger.error(
         `[FAIL] Failed record ${record.id} for NIP ${nip}: ${e.message}`,
       );
-      logger.error(e.stack); // Log the full stack trace for debugging
+      logger.error(e.stack);
     }
   }
 
   return true;
 }
 
+function parseCliArgs(argv) {
+  const options = {
+    datasetPath: null,
+    nips: [],
+    help: false,
+  };
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    switch (arg) {
+      case "--dataset":
+        if (i + 1 >= argv.length) {
+          throw new Error("--dataset requires a path argument.");
+        }
+        options.datasetPath = argv[++i];
+        break;
+      case "--help":
+      case "-h":
+        options.help = true;
+        break;
+      default:
+        if (arg.startsWith("--")) {
+          throw new Error(`Unknown option: ${arg}`);
+        }
+        if (arg.trim().length > 0) {
+          options.nips.push(arg.trim());
+        }
+        break;
+    }
+  }
+
+  if (!options.datasetPath) {
+    const defaultCandidate = path.join(STAGING_DATA_DIR, DEFAULT_DATASET_FILENAME);
+    options.datasetPath = null;
+    if (options.nips.length === 0 && fs.existsSync(defaultCandidate)) {
+      logger.info(
+        `[CONFIG] Detected ${DEFAULT_DATASET_FILENAME}. Run with '--dataset ${path.relative(process.cwd(), defaultCandidate)}' to use the merged dataset.`,
+      );
+    }
+  }
+
+  return options;
+}
+
+function printHelp() {
+  const lines = [
+    "Usage: node script/importer.js [options] [NIP ...]",
+    "",
+    "Options:",
+    "  --dataset <path>   Import from a merged JSON array (e.g. staging_data/1-final.json).",
+    "  --help             Show this message.",
+    "",
+    "Without --dataset the importer reads per-NIP JSON files under staging_data.",
+    "Provide one or more NIP arguments to limit processing to specific employees.",
+  ];
+  lines.forEach((line) => logger.info(line));
+}
+
+async function loadDatasetRecords(datasetPath) {
+  const raw = await fsp.readFile(datasetPath, "utf-8");
+  const sanitized = sanitizeString(raw) ?? raw;
+  const parsed = JSON.parse(sanitized);
+
+  if (Array.isArray(parsed)) {
+    return parsed;
+  }
+
+  if (parsed && Array.isArray(parsed.data)) {
+    return parsed.data;
+  }
+
+  throw new Error(
+    `${datasetPath} does not contain an array or an object with a 'data' array.`,
+  );
+}
+
+function groupRecordsByNip(records, nipFilterSet) {
+  const groups = new Map();
+
+  for (const record of records) {
+    if (!record || typeof record !== "object") continue;
+
+    const nip = normalizeNip(resolveRecordNip(record));
+    if (!nip) {
+      logger.warn(
+        `[DATASET] Record ${record.id || "<no-id>"} missing NIP. Skipping.`,
+      );
+      continue;
+    }
+
+    if (nipFilterSet && !nipFilterSet.has(nip)) continue;
+
+    if (!groups.has(nip)) {
+      groups.set(nip, []);
+    }
+    groups.get(nip).push(record);
+  }
+
+  return groups;
+}
+
+/**
+ * Processes a single staging JSON file identified by NIP.
+ * @param {string} nip
+ * @returns {Promise<boolean>} true when the file existed and was processed
+ */
+async function processNip(nip) {
+  const filePath = path.join(STAGING_DATA_DIR, `${nip}.json`);
+
+  let fileContent;
+  try {
+    fileContent = await fsp.readFile(filePath, "utf-8");
+  } catch (err) {
+    logger.error(
+      `[FAIL] Unable to read staging file for NIP ${nip}: ${err.message}`,
+    );
+    return false;
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(fileContent);
+  } catch (err) {
+    logger.error(
+      `[FAIL] Invalid JSON structure for NIP ${nip}: ${err.message}`,
+    );
+    return false;
+  }
+
+  const records = Array.isArray(parsed?.data)
+    ? parsed.data
+    : Array.isArray(parsed)
+      ? parsed
+      : null;
+
+  return processRecordsForNip(nip, records);
+}
+
 /**
  * Main Importer Function
  */
 async function main() {
+  let options;
+  try {
+    options = parseCliArgs(process.argv.slice(2));
+  } catch (err) {
+    logger.error(`[ARGS] ${err.message}`);
+    printHelp();
+    process.exitCode = 1;
+    return;
+  }
+
+  if (options.help) {
+    printHelp();
+    return;
+  }
+
   logger.info("--- Starting Standalone Importer (Jabatan Upsert) Script ---");
 
-  const files = await fsp.readdir(STAGING_DATA_DIR);
+  if (options.datasetPath) {
+    const datasetAbsolute = path.resolve(process.cwd(), options.datasetPath);
+    let datasetRecords;
+    try {
+      datasetRecords = await loadDatasetRecords(datasetAbsolute);
+    } catch (err) {
+      logger.error(`[FAIL] Unable to read dataset ${datasetAbsolute}: ${err.message}`);
+      throw err;
+    }
 
-  for (const file of files) {
-    if (!file.endsWith(".json")) continue;
+    const nipFilter =
+      options.nips.length > 0
+        ? new Set(options.nips.map((nip) => nip.trim()).filter(Boolean))
+        : null;
 
-    const nip = path.basename(file, ".json");
-    await processNip(nip);
+    const grouped = groupRecordsByNip(datasetRecords, nipFilter);
+
+    if (grouped.size === 0) {
+      logger.warn("[DATASET] No records matched the provided filters.");
+    }
+
+    for (const [nip, records] of grouped.entries()) {
+      await processRecordsForNip(nip, records);
+    }
+  } else {
+    const files = await fsp.readdir(STAGING_DATA_DIR);
+    const nipFilter =
+      options.nips.length > 0
+        ? new Set(options.nips.map((nip) => nip.trim()).filter(Boolean))
+        : null;
+
+    for (const file of files) {
+      if (!file.endsWith(".json")) continue;
+
+      const nip = path.basename(file, ".json");
+      if (nipFilter && !nipFilter.has(nip)) continue;
+
+      await processNip(nip);
+    }
   }
 
   logger.info("--- Importer Script Finished ---");
@@ -471,6 +642,7 @@ if (require.main === module) {
 module.exports = {
   main,
   processNip,
+  processRecordsForNip,
   parseDate,
   findJabatanKode,
   prisma,
