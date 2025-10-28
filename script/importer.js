@@ -33,6 +33,17 @@ const LOCAL_FILE_KEY_MAPPING = {
 // --- HELPER FUNCTIONS ---
 
 /**
+ * Removes non-UTF-8 characters from a string.
+ * @param {string} str
+ * @returns {string}
+ */
+function sanitizeString(str) {
+  if (!str) return null;
+  // This regex replaces invalid multi-byte UTF-8 sequences with an empty string.
+  return str.replace(/[\uFFFD]/g, "");
+}
+
+/**
  * Parses "DD-MM-YYYY" string to a Date object.
  * @param {string} dateString
  * @returns {Date | null}
@@ -246,7 +257,7 @@ async function processNip(nip) {
         trx_jabatan_organization_id: organization
           ? organization.organization_id
           : null,
-        trx_jabatan_nomor_sk: record.nomorSk,
+        trx_jabatan_nomor_sk: sanitizeString(record.nomorSk),
         trx_jabatan_tgl_sk: parseDate(record.tanggalSk),
         trx_jabatan_status: STATUS_SYNC_BKN,
         trx_jabatan_jenis_sk: 3,
