@@ -17,7 +17,14 @@ const STATIC_AUTH_TOKEN = process.env.STATIC_AUTH_TOKEN;
 const masterEmployeeData = require("../ms_employee.json");
 const MASTER_NIP_LIST = masterEmployeeData.map((emp) => emp.employee_nip);
 const STAGING_DIR = path.join(__dirname, "..", "staging_data");
-const CONCURRENCY_LIMIT = 10;
+const parsedConcurrency = Number.parseInt(
+  process.env.CONCURRENCY_LIMIT ?? "50",
+  10,
+);
+const CONCURRENCY_LIMIT = 100;
+const FORCE_REFRESH_JSON = false;
+const FORCE_REFRESH_FILES = true;
+const CLEAN_TEMP_BEFORE_DOWNLOAD = true;
 
 // --- NEW: Config for File Downloading ---
 const DOWNLOAD_PATH = "/download-dok";
@@ -50,34 +57,81 @@ async function fetchDynamicToken() {
 }
 
 /**
+ * Retries the provided request once when a 401 is encountered so we can refresh
+ * the dynamic token without crashing the entire batch.
+ * @param {(token: string) => Promise<*>} makeRequest
+ * @param {{ current: string }} tokenRef
+ * @param {string} context
+ * @returns {Promise<*>}
+ */
+async function withTokenRetry(makeRequest, tokenRef, context) {
+  try {
+    return await makeRequest(tokenRef.current);
+  } catch (error) {
+    if (error.response && error.response.status === 401) {
+      logger.warn(
+        `[AUTH] Token expired during ${context}. Refreshing token and retrying once.`,
+      );
+      tokenRef.current = await fetchDynamicToken();
+      return makeRequest(tokenRef.current);
+    }
+    throw error;
+  }
+}
+
+/**
  * This function now does TWO things:
  * 1. Fetches and saves the NIP's JSON.
  * 2. Parses the JSON and downloads all associated files.
  */
-async function fetchAndSaveAllData(nip, dynamicToken, staticToken) {
+async function fetchAndSaveAllData(
+  nip,
+  tokenRef,
+  staticToken,
+  {
+    forceJsonRefresh = FORCE_REFRESH_JSON,
+    forceFileRefresh = FORCE_REFRESH_FILES,
+  } = {},
+) {
   const jsonFilePath = path.join(STAGING_DIR, `${nip}.json`);
 
   // --- 1. JSON "Resume" Logic ---
-  try {
-    await fs.access(jsonFilePath);
-    logger.warn(`[SKIP] ${nip}.json already exists. Skipping NIP.`);
-    return; // This skips both JSON and file downloads
-  } catch (e) {
-    // File does not exist, proceed.
+  if (!forceJsonRefresh) {
+    try {
+      await fs.access(jsonFilePath);
+      logger.warn(`[SKIP] ${nip}.json already exists. Skipping NIP.`);
+      return; // This skips both JSON and file downloads
+    } catch (e) {
+      // File does not exist, proceed.
+    }
+  } else {
+    try {
+      await fs.access(jsonFilePath);
+      logger.info(
+        `[REFRESH JSON] Removing existing ${nip}.json before refetch.`,
+      );
+      await fs.unlink(jsonFilePath);
+    } catch (e) {
+      // File might not exist, ignore.
+    }
   }
 
   // --- 2. Fetch and Save JSON ---
   let historyRecords; // We need this for Step 3
-  const authHeaders = {
+  const makeAuthHeaders = (token) => ({
     accept: "application/json",
-    Authorization: `Bearer ${dynamicToken}`,
+    Authorization: `Bearer ${token}`,
     Auth: `Bearer ${staticToken}`,
-  };
+  });
 
   try {
     logger.info(`[FETCH JSON] Fetching history for ${nip}...`);
     const url = `${API_BASE_URL}/jabatan/pns/${nip}`;
-    const response = await axios.get(url, { headers: authHeaders });
+    const response = await withTokenRetry(
+      (token) => axios.get(url, { headers: makeAuthHeaders(token) }),
+      tokenRef,
+      `JSON fetch for ${nip}`,
+    );
 
     const data = response.data;
     await fs.writeFile(jsonFilePath, JSON.stringify(data, null, 2));
@@ -113,16 +167,27 @@ async function fetchAndSaveAllData(nip, dynamicToken, staticToken) {
       const downloadUrl = `${API_BASE_URL}${DOWNLOAD_PATH}?filePath=${encodedFilePath}`;
 
       // This is the file-staging name we agreed on
-      const safeFilename = `${record.id}_${fileInfo.dok_id}_${path.basename(filePath)}`;
+      const safeFilename = `${record.id}_${docKey}_${path.basename(filePath)}`;
       const localFilePath = path.join(DOWNLOAD_DIR, safeFilename);
 
       // --- File "Resume" Logic ---
-      try {
-        await fs.access(localFilePath);
-        logger.warn(`[SKIP FILE] File ${safeFilename} already exists.`);
-        continue; // Skip this file
-      } catch (e) {
-        // File does not exist, proceed to download.
+      if (!forceFileRefresh) {
+        try {
+          await fs.access(localFilePath);
+          logger.warn(`[SKIP FILE] File ${safeFilename} already exists.`);
+          continue; // Skip this file
+        } catch (e) {
+          // File does not exist, proceed to download.
+        }
+      } else if (CLEAN_TEMP_BEFORE_DOWNLOAD) {
+        try {
+          await fs.unlink(localFilePath);
+          logger.info(
+            `[REFRESH FILE] Removed old ${safeFilename} before download.`,
+          );
+        } catch (e) {
+          // Ignore if file missing.
+        }
       }
 
       // --- Download Logic ---
@@ -130,17 +195,23 @@ async function fetchAndSaveAllData(nip, dynamicToken, staticToken) {
         logger.info(
           `[DOWNLOAD] Downloading: ${fileInfo.dok_nama} (NIP: ${nip})`,
         );
-        const fileResponse = await axios.get(downloadUrl, {
-          headers: { ...authHeaders, accept: "application/pdf" },
-          responseType: "stream",
-        });
+        await withTokenRetry(
+          async (token) => {
+            const fileResponse = await axios.get(downloadUrl, {
+              headers: { ...makeAuthHeaders(token), accept: "application/pdf" },
+              responseType: "stream",
+            });
 
-        const writer = fss.createWriteStream(localFilePath);
-        fileResponse.data.pipe(writer);
-        await new Promise((resolve, reject) => {
-          writer.on("finish", resolve);
-          writer.on("error", reject);
-        });
+            const writer = fss.createWriteStream(localFilePath);
+            fileResponse.data.pipe(writer);
+            await new Promise((resolve, reject) => {
+              writer.on("finish", resolve);
+              writer.on("error", reject);
+            });
+          },
+          tokenRef,
+          `file download for ${nip} (${safeFilename})`,
+        );
 
         logger.info(`[SAVE FILE] Saved file to: ${localFilePath}`);
       } catch (fileError) {
@@ -179,10 +250,10 @@ async function main() {
   await fs.mkdir(STAGING_DIR, { recursive: true });
   await fs.mkdir(DOWNLOAD_DIR, { recursive: true }); // <-- NEW
 
-  const dynamicToken = await fetchDynamicToken();
+  const tokenRef = { current: await fetchDynamicToken() };
   const staticToken = STATIC_AUTH_TOKEN;
 
-  if (!dynamicToken) return;
+  if (!tokenRef.current) return;
 
   logger.info(`--- Starting batch processing ---`);
   logger.info(`Total NIPs to process: ${MASTER_NIP_LIST.length}`);
@@ -194,7 +265,7 @@ async function main() {
     const batchNIPs = queue.splice(0, CONCURRENCY_LIMIT);
     const promises = batchNIPs.map((nip) =>
       // Renamed the function to be more descriptive
-      fetchAndSaveAllData(nip, dynamicToken, staticToken),
+      fetchAndSaveAllData(nip, tokenRef, staticToken),
     );
     await Promise.all(promises);
     logger.info(`--- Batch complete. ${queue.length} NIPs remaining. ---`);

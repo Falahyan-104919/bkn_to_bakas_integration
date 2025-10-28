@@ -361,31 +361,6 @@ async function processNip(nip) {
 
       // --- 4. START TRANSACTION ---
       await prisma.$transaction(async (tx) => {
-        const fileIdsToLink = {}; // { trx_jabatan_file_id: 123, ... }
-
-        // --- FIX: PROCESS FILES *FIRST* (FOR BOTH CREATE AND UPDATE) ---
-        for (const [fileKeyName, fileData] of fileCreateDataMap.entries()) {
-          // We UPSERT the file record. This creates it if it's new, or
-          // updates it with the new filename/path if it already exists.
-          // --- CRITICAL ASSUMPTION: Requires a unique key on [file_employee_id, file_type] ---
-          // In your schema.prisma: @@unique([file_employee_id, file_type])
-          const newFileRecord = await tx.trx_employee_file.upsert({
-            where: {
-              file_employee_id_file_type: {
-                // <-- Assumed unique index name
-                file_employee_id: employee.employee_id,
-                file_type: fileData.fileMapping.fileType,
-              },
-            },
-            update: fileData.createData, // Update with new name, path, size
-            create: fileData.createData, // Create if it doesn't exist
-          });
-
-          // Save the new/updated file ID to link to the jabatan
-          fileIdsToLink[fileData.fileMapping.field] = newFileRecord.file_id;
-        }
-
-        // --- Now, find the existing jabatan ---
         const uniqueWhere = {
           trx_jabatan_employee_id_trx_jabatan_tmt: {
             trx_jabatan_employee_id: employee.employee_id,
@@ -393,11 +368,10 @@ async function processNip(nip) {
           },
         };
 
-        await tx.trx_jabatan.upsert({
+        const jabatanRecord = await tx.trx_jabatan.upsert({
           where: uniqueWhere,
           update: {
             ...dataPayload,
-            ...fileIdsToLink,
           },
           create: {
             ...dataPayload,
@@ -405,9 +379,32 @@ async function processNip(nip) {
             trx_jabatan_tmt: parsedTmtJabatan,
             trx_jabatan_create_date: new Date(),
             trx_jabatan_create_by: 0,
-            ...fileIdsToLink,
           },
         });
+
+        if (fileCreateDataMap.size === 0) {
+          return;
+        }
+
+        const fileIdsToLink = {};
+
+        for (const [, fileData] of fileCreateDataMap.entries()) {
+          const newFileRecord = await tx.trx_employee_file.create({
+            data: fileData.createData,
+          });
+
+          fileIdsToLink[fileData.fileMapping.field] = newFileRecord.file_id;
+        }
+
+        if (Object.keys(fileIdsToLink).length > 0) {
+          await tx.trx_jabatan.update({
+            where: {
+              trx_jabatan_id: jabatanRecord.trx_jabatan_id,
+            },
+            data: fileIdsToLink,
+          });
+        }
+
         logger.info(
           `[UPSERT] Upserted record for NIP ${nip} / TMT ${record.tmtJabatan}.`,
         );
