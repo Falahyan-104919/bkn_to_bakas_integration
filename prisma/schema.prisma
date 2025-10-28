@@ -1300,7 +1300,7 @@ model trx_jabatan {
   trx_jabatan_ket                  String?   @db.VarChar(255)
   trx_jabatan_type                 Int?
   trx_jabatan_sampai               DateTime? @db.Date
-  trx_jabatan_bkn                  String?   @db.VarChar(255)
+  trx_jabatan_bkn_id               String?   @db.VarChar(255)
   trx_jabatan_file_spp             Int?
   trx_jabatan_file_ba              Int?
 
