@@ -23,7 +23,7 @@ const parsedConcurrency = Number.parseInt(
 );
 const CONCURRENCY_LIMIT = 100;
 const FORCE_REFRESH_JSON = false;
-const FORCE_REFRESH_FILES = true;
+const FORCE_REFRESH_FILES = false;
 const CLEAN_TEMP_BEFORE_DOWNLOAD = true;
 
 // --- NEW: Config for File Downloading ---
