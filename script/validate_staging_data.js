@@ -1,6 +1,7 @@
+#!/usr/bin/env node
+
 // 1. Imports
-const fs = require("fs");
-const fsp = fs.promises;
+const fsp = require("fs").promises;
 const path = require("path");
 const logger = require("./logger");
 
@@ -19,9 +20,12 @@ const LOCAL_FILE_KEY_MAPPING = {
   baJabatan: { fileType: 41, field: "trx_jabatan_file_ba" },
 };
 
+// Populate this array when you want --errors-only to work without --ids.
+const DEFAULT_PROBLEM_RECORD_IDS = [];
+
 // 3. Helpers
 function sanitizeString(str) {
-  if (!str) return null;
+  if (typeof str !== "string") return str;
   return str.replace(/[\uFFFD]/g, "");
 }
 
@@ -76,14 +80,171 @@ function buildTempFilename(recordId, docKey, dokUri) {
   return `${recordId}_${docKey}_${basename}`;
 }
 
-// 4. Validation routines
+function resolveRecordNip(record) {
+  return (
+    record?.nipBaru ??
+    record?.nip ??
+    record?.employee_nip ??
+    record?.employeeNip ??
+    record?.nipbaru ??
+    null
+  );
+}
+
+function normalizeNip(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof value === "number") {
+    return String(value);
+  }
+  return null;
+}
+
+function parseCliArgs(argv) {
+  const options = {
+    datasetPath: null,
+    errorsOnly: false,
+    problemIdsPath: null,
+    nips: [],
+    help: false,
+  };
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    switch (arg) {
+      case "--dataset":
+        if (i + 1 >= argv.length) {
+          throw new Error("--dataset requires a path argument.");
+        }
+        options.datasetPath = argv[++i];
+        break;
+      case "--ids":
+        if (i + 1 >= argv.length) {
+          throw new Error("--ids requires a path argument.");
+        }
+        options.problemIdsPath = argv[++i];
+        break;
+      case "--errors-only":
+        options.errorsOnly = true;
+        break;
+      case "--help":
+      case "-h":
+        options.help = true;
+        break;
+      default:
+        if (arg.startsWith("--")) {
+          throw new Error(`Unknown option: ${arg}`);
+        }
+        if (arg.trim().length > 0) {
+          options.nips.push(arg.trim());
+        }
+        break;
+    }
+  }
+
+  return options;
+}
+
+function printHelp() {
+  const lines = [
+    "Usage: node script/validate_staging_data.js [options] [NIP ...]",
+    "",
+    "Options:",
+    "  --dataset <path>   Validate records from a merged JSON file.",
+    "  --errors-only      Restrict validation to problematic record IDs.",
+    "  --ids <path>       Load problematic record IDs from a JSON array file.",
+    "  --help             Show this message.",
+    "",
+    "Without --dataset the script validates staging_data/<NIP>.json files.",
+    "When --errors-only is supplied, records outside the ID list are skipped.",
+  ];
+  lines.forEach((line) => logger.info(line));
+}
+
+async function getProblemRecordIdSet(idsPath) {
+  if (idsPath) {
+    const absolute = path.resolve(process.cwd(), idsPath);
+    const raw = await fsp.readFile(absolute, "utf-8");
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      throw new Error("--ids file must contain a JSON array of record IDs.");
+    }
+    return new Set(parsed.map((value) => String(value).trim()).filter(Boolean));
+  }
+
+  if (DEFAULT_PROBLEM_RECORD_IDS.length > 0) {
+    return new Set(DEFAULT_PROBLEM_RECORD_IDS);
+  }
+
+  return null;
+}
+
+async function loadDatasetRecords(datasetPath) {
+  const raw = await fsp.readFile(datasetPath, "utf-8");
+  const sanitized = sanitizeString(raw) ?? raw;
+  const parsed = JSON.parse(sanitized);
+
+  if (Array.isArray(parsed)) {
+    return parsed;
+  }
+
+  if (parsed && Array.isArray(parsed.data)) {
+    return parsed.data;
+  }
+
+  throw new Error(
+    `${datasetPath} does not contain an array or an object with a 'data' array.`,
+  );
+}
+
+function groupRecordsByNip(records, { nipFilterSet, problemIdSet } = {}) {
+  const groups = new Map();
+
+  for (const record of records) {
+    if (!record || typeof record !== "object") continue;
+
+    if (problemIdSet && problemIdSet.size > 0) {
+      if (!record.id || !problemIdSet.has(record.id)) continue;
+    }
+
+    const nip = normalizeNip(resolveRecordNip(record));
+    if (!nip) {
+      logger.warn(
+        `[DATASET] Record ${record.id || "<no-id>"} missing NIP. Skipping.`,
+      );
+      continue;
+    }
+
+    if (nipFilterSet && !nipFilterSet.has(nip)) continue;
+
+    if (!groups.has(nip)) {
+      groups.set(nip, []);
+    }
+    groups.get(nip).push(record);
+  }
+
+  return groups;
+}
+
+async function discoverNipFiles() {
+  const files = await fsp.readdir(STAGING_DATA_DIR);
+  return files
+    .filter((file) => file.endsWith(".json"))
+    .map((file) => path.basename(file, ".json"))
+    .sort();
+}
+
 async function validateJsonStructure(filePath) {
   const issues = [];
   let parsed;
 
   try {
     const raw = await fsp.readFile(filePath, "utf-8");
-    parsed = JSON.parse(sanitizeString(raw));
+    const sanitized = sanitizeString(raw) ?? raw;
+    parsed = JSON.parse(sanitized);
   } catch (err) {
     issues.push(`JSON parse failed: ${err.message}`);
     return { parsed: null, issues };
@@ -97,7 +258,7 @@ async function validateJsonStructure(filePath) {
   return { parsed, issues };
 }
 
-async function validateRecordFiles(record, nip) {
+async function validateRecordFiles(record) {
   const issues = [];
   const warnings = [];
 
@@ -141,7 +302,7 @@ async function validateRecordFiles(record, nip) {
         issues.push(`Doc ${docKey} file size is zero bytes`);
         continue;
       }
-    } catch (err) {
+    } catch {
       issues.push(`Doc ${docKey} missing staging file (${tempFilename})`);
       continue;
     }
@@ -163,9 +324,14 @@ async function validateRecordFiles(record, nip) {
   return { issues, warnings };
 }
 
-async function validateRecord(record, nip) {
+async function validateRecord(record) {
   const issues = [];
   const warnings = [];
+
+  if (!record || typeof record !== "object") {
+    issues.push("Record is missing or not an object");
+    return { issues, warnings };
+  }
 
   if (!record.id || !record.tmtJabatan) {
     issues.push("Missing critical fields (id or tmtJabatan)");
@@ -179,31 +345,25 @@ async function validateRecord(record, nip) {
     warnings.push(`Invalid tanggalSk "${record.tanggalSk}"`);
   }
 
-  const pathCheck = await validateRecordFiles(record, nip);
+  const pathCheck = await validateRecordFiles(record);
   issues.push(...pathCheck.issues);
   warnings.push(...pathCheck.warnings);
 
   return { issues, warnings };
 }
 
-// 5. Main CLI
-async function validateNipFile(nip) {
-  const filePath = path.join(STAGING_DATA_DIR, `${nip}.json`);
-
-  const { parsed, issues: jsonIssues } = await validateJsonStructure(filePath);
-  const problems = [...jsonIssues];
+async function validateRecordsForNip(nip, records, initialProblems = []) {
+  const problems = [...initialProblems];
   const warnings = [];
-
-  if (!parsed) {
-    return { nip, problems, warnings, recordCount: 0 };
-  }
-
+  const processedRecordIds = [];
   let recordCount = 0;
 
-  for (const record of parsed.data) {
+  for (const record of records) {
     recordCount += 1;
+    if (record && record.id) processedRecordIds.push(record.id);
+
     const { issues: recordIssues, warnings: recordWarnings } =
-      await validateRecord(record, nip);
+      await validateRecord(record);
 
     if (recordIssues.length > 0) {
       problems.push(
@@ -217,36 +377,137 @@ async function validateNipFile(nip) {
     }
   }
 
-  return { nip, problems, warnings, recordCount };
+  return { nip, problems, warnings, recordCount, processedRecordIds };
 }
 
-async function main() {
-  const [, , nipArg] = process.argv;
+async function validateNipFile(nip, filterSet) {
+  const filePath = path.join(STAGING_DATA_DIR, `${nip}.json`);
 
-  const nips = [];
-  if (nipArg) {
-    nips.push(nipArg);
-  } else {
-    const allFiles = await fsp.readdir(STAGING_DATA_DIR);
-    for (const file of allFiles) {
-      if (file.endsWith(".json")) {
-        nips.push(path.basename(file, ".json"));
-      }
-    }
+  const { parsed, issues: jsonIssues } = await validateJsonStructure(filePath);
+  if (!parsed) {
+    return {
+      nip,
+      problems: jsonIssues,
+      warnings: [],
+      recordCount: 0,
+      processedRecordIds: [],
+    };
   }
 
-  if (nips.length === 0) {
-    logger.info("No JSON inputs found; nothing to validate.");
+  const dataArray = parsed.data || [];
+  const filteredRecords =
+    filterSet && filterSet.size > 0
+      ? dataArray.filter((record) => record && filterSet.has(record.id))
+      : dataArray;
+
+  return validateRecordsForNip(nip, filteredRecords, jsonIssues);
+}
+
+// 4. Main CLI
+async function main() {
+  let options;
+  try {
+    options = parseCliArgs(process.argv.slice(2));
+  } catch (err) {
+    logger.error(`[ARGS] ${err.message}`);
+    printHelp();
+    process.exitCode = 1;
     return;
+  }
+
+  if (options.help) {
+    printHelp();
+    return;
+  }
+
+  let problemIdSet = null;
+  if (options.errorsOnly) {
+    problemIdSet = await getProblemRecordIdSet(options.problemIdsPath);
+    if (!problemIdSet || problemIdSet.size === 0) {
+      logger.warn(
+        "[CONFIG] --errors-only requested but no problematic record IDs were supplied.",
+      );
+      return;
+    }
+    logger.info(
+      `[CONFIG] Restricting validation to ${problemIdSet.size} problematic record ID(s).`,
+    );
+  }
+
+  const unresolvedProblemIds = problemIdSet ? new Set(problemIdSet) : null;
+  const targets = [];
+
+  if (options.datasetPath) {
+    const datasetAbsolute = path.resolve(process.cwd(), options.datasetPath);
+    const datasetRecords = await loadDatasetRecords(datasetAbsolute);
+    logger.info(
+      `[DATASET] Loaded ${datasetRecords.length} record(s) from ${datasetAbsolute}`,
+    );
+
+    const nipFilterSet =
+      options.nips.length > 0
+        ? new Set(options.nips.map((nip) => nip.trim()).filter(Boolean))
+        : null;
+
+    const grouped = groupRecordsByNip(datasetRecords, {
+      nipFilterSet,
+      problemIdSet,
+    });
+
+    if (grouped.size === 0) {
+      logger.warn(
+        "[DATASET] No dataset records matched the provided filters; nothing to validate.",
+      );
+    }
+
+    for (const [nip, records] of grouped.entries()) {
+      targets.push({ nip, records });
+    }
+  } else {
+    const nipList =
+      options.nips.length > 0 ? options.nips : await discoverNipFiles();
+
+    if (nipList.length === 0) {
+      logger.info("[SCAN] No staging JSON files found; nothing to validate.");
+      return;
+    }
+
+    if (options.errorsOnly && problemIdSet) {
+      logger.info(
+        "[CONFIG] Applying problematic record filter to per-NIP JSON files.",
+      );
+    }
+
+    for (const nip of nipList) {
+      targets.push({ nip, fromFile: true });
+    }
   }
 
   let fatalCount = 0;
   let warningCount = 0;
 
-  for (const nip of nips) {
-    const result = await validateNipFile(nip);
+  for (const target of targets) {
+    let result;
+    if (target.fromFile) {
+      result = await validateNipFile(target.nip, problemIdSet);
+    } else {
+      result = await validateRecordsForNip(target.nip, target.records);
+    }
+
+    const didWork =
+      result.recordCount > 0 ||
+      result.problems.length > 0 ||
+      result.warnings.length > 0;
+
+    if (!didWork) {
+      logger.info(
+        `NIP ${target.nip}: 0 matching record(s) for current filters.`,
+      );
+      continue;
+    }
+
     logger.info(
-      `NIP ${nip}: ${result.recordCount} record(s) checked. ${result.problems.length} issue(s), ${result.warnings.length} warning(s).`,
+      `NIP ${result.nip}: ${result.recordCount} record(s) checked. ${result.problems.length} issue(s), ${result.warnings.length} warning(s).`,
     );
 
     for (const issue of result.problems) {
@@ -258,6 +519,20 @@ async function main() {
       warningCount += 1;
       logger.warn(`  [WARN] ${warning}`);
     }
+
+    if (unresolvedProblemIds && result.processedRecordIds) {
+      for (const processedId of result.processedRecordIds) {
+        if (processedId && unresolvedProblemIds.has(processedId)) {
+          unresolvedProblemIds.delete(processedId);
+        }
+      }
+    }
+  }
+
+  if (unresolvedProblemIds && unresolvedProblemIds.size > 0) {
+    logger.warn(
+      `[MISSING] ${unresolvedProblemIds.size} record ID(s) were not encountered: ${Array.from(unresolvedProblemIds).join(", ")}`,
+    );
   }
 
   logger.info(
