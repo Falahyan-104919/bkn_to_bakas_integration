@@ -561,7 +561,7 @@ model ms_organization {
   organization_alamat      String?   @db.VarChar(255)
   organization_code        String?   @db.VarChar(255)
   organization_bkn_id      String?   @db.VarChar(255)
-  organization_bkn_name    String?   @db.VarChar(255)
+  organization_bkn_nama    String?   @db.VarChar(255)
 
   @@index([organization_status, organization_code, organization_name], map: "NAME")
   @@index([organization_parent_id], map: "PARENT")
