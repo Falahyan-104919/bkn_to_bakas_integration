@@ -267,7 +267,23 @@ async function processRecordCleanup(options, nip, record, stats) {
     return;
   }
 
-  const presentFileKeys = determinePresentFileKeys(record);
+  const hasPathEntries =
+    record.path &&
+    typeof record.path === "object" &&
+    Object.keys(record.path).length > 0;
+
+  const presentFileKeys = hasPathEntries
+    ? determinePresentFileKeys(record)
+    : new Set();
+
+  if (hasPathEntries && presentFileKeys.size === 0) {
+    stats.pathUnmapped += 1;
+    logger.info(
+      `[SKIP] Record ${record.id} (NIP ${nip}) has document path entries but none map to known file keys; leaving links untouched.`,
+    );
+    return;
+  }
+
   const unlinkActions = [];
 
   for (const [fileKey, mapping] of Object.entries(LOCAL_FILE_KEY_MAPPING)) {
@@ -428,6 +444,7 @@ async function main() {
     invalidTmt: 0,
     employeeMissing: 0,
     jabatanMissing: 0,
+    pathUnmapped: 0,
     filesDisabled: 0,
     filesDeleted: 0,
     fileDeleteFailed: 0,
@@ -451,6 +468,9 @@ async function main() {
   logger.info(`Employees missing: ${stats.employeeMissing}`);
   logger.info(`Jabatan rows missing: ${stats.jabatanMissing}`);
   logger.info(`Invalid TMT skipped: ${stats.invalidTmt}`);
+  logger.info(
+    `Skipped records with unmapped doc path entries: ${stats.pathUnmapped}`,
+  );
   if (!options.dryRun) {
     logger.info(`File records disabled: ${stats.filesDisabled}`);
     if (options.deleteFiles) {
