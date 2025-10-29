@@ -224,17 +224,21 @@ async function resolveNipFilter(options) {
 }
 
 async function findDuplicateGroups(nipFilter) {
-  const results = await prisma.$queryRaw`
-    SELECT
-      e.employee_nip AS nip,
-      j.trx_jabatan_tmt AS tmt,
-      COUNT(*) AS row_count
-    FROM trx_jabatan j
-    JOIN ms_employee e ON e.employee_id = j.trx_jabatan_employee_id
-    ${nipFilter ? Prisma.sql`WHERE e.employee_nip IN (${Prisma.join(Array.from(nipFilter))})` : Prisma.empty}
-    GROUP BY e.employee_nip, j.trx_jabatan_tmt
-    HAVING COUNT(*) > 1
-  `;
+  const results = await prisma.$queryRaw(
+    Prisma.sql`
+      SELECT
+        e.employee_nip AS nip,
+        j.trx_jabatan_tmt AS tmt,
+        COUNT(*) AS row_count
+      FROM trx_jabatan j
+      JOIN ms_employee e ON e.employee_id = j.trx_jabatan_employee_id
+      ${nipFilter && nipFilter.size > 0
+        ? Prisma.sql`WHERE e.employee_nip IN (${Prisma.join(Array.from(nipFilter))})`
+        : Prisma.empty}
+      GROUP BY e.employee_nip, j.trx_jabatan_tmt
+      HAVING COUNT(*) > 1
+    `,
+  );
 
   return results.map((row) => ({
     nip: row.nip,
