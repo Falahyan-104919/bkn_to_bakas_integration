@@ -287,7 +287,7 @@ async function findDatasetRecord(datasetIndex, nip, tmt) {
   return datasetIndex.get(key) || [];
 }
 
-async function gatherJabatanFileLinks(nipFilter) {
+async function gatherJabatanFileLinks(employeeIdFilter) {
   const rows = await prisma.trx_jabatan.findMany({
     where: {
       OR: [
@@ -295,10 +295,10 @@ async function gatherJabatanFileLinks(nipFilter) {
         { trx_jabatan_file_spp: { not: null } },
         { trx_jabatan_file_ba: { not: null } },
       ],
-      ...(nipFilter
+      ...(employeeIdFilter
         ? {
-            ms_employee: {
-              employee_nip: { in: Array.from(nipFilter) },
+            trx_jabatan_employee_id: {
+              in: Array.from(employeeIdFilter),
             },
           }
         : {}),
@@ -309,11 +309,7 @@ async function gatherJabatanFileLinks(nipFilter) {
       trx_jabatan_file_id: true,
       trx_jabatan_file_spp: true,
       trx_jabatan_file_ba: true,
-      ms_employee: {
-        select: {
-          employee_nip: true,
-        },
-      },
+      trx_jabatan_employee_id: true,
     },
   });
 
@@ -367,10 +363,54 @@ async function main() {
       ? new Set(options.nips.map((nip) => nip.trim()).filter(Boolean))
       : null;
 
-  const jabatanRows = await gatherJabatanFileLinks(nipFilter);
+  const employeeIdToNip = new Map();
+  let employeeIdFilter = null;
+
+  if (nipFilter && nipFilter.size > 0) {
+    const employees = await prisma.ms_employee.findMany({
+      where: { employee_nip: { in: Array.from(nipFilter) } },
+      select: { employee_id: true, employee_nip: true },
+    });
+
+    if (employees.length === 0) {
+      logger.warn(
+        "[WARN] No employees found matching the provided NIP filter; nothing to do.",
+      );
+      return;
+    }
+
+    for (const employee of employees) {
+      if (employee.employee_id !== null) {
+        employeeIdToNip.set(employee.employee_id, employee.employee_nip);
+      }
+    }
+
+    employeeIdFilter = new Set(employeeIdToNip.keys());
+  }
+
+  const jabatanRows = await gatherJabatanFileLinks(employeeIdFilter);
   logger.info(
     `[DB] Found ${jabatanRows.length} jabatan row(s) with linked files to inspect.`,
   );
+
+  const missingEmployeeIds = new Set();
+  for (const row of jabatanRows) {
+    if (row.trx_jabatan_employee_id !== null) {
+      if (!employeeIdToNip.has(row.trx_jabatan_employee_id)) {
+        missingEmployeeIds.add(row.trx_jabatan_employee_id);
+      }
+    }
+  }
+
+  if (missingEmployeeIds.size > 0) {
+    const extraEmployees = await prisma.ms_employee.findMany({
+      where: { employee_id: { in: Array.from(missingEmployeeIds) } },
+      select: { employee_id: true, employee_nip: true },
+    });
+    for (const emp of extraEmployees) {
+      employeeIdToNip.set(emp.employee_id, emp.employee_nip);
+    }
+  }
 
   const fileIds = new Set();
   for (const row of jabatanRows) {
@@ -390,6 +430,7 @@ async function main() {
     restored: 0,
     skippedDatasetMissing: 0,
     skippedDocMissing: 0,
+    skippedEmployeeMissing: 0,
     errors: 0,
     reactivated: 0,
   };
@@ -399,7 +440,15 @@ async function main() {
   }
 
   for (const row of jabatanRows) {
-    const nip = row.ms_employee.employee_nip;
+    const employeeId = row.trx_jabatan_employee_id;
+    const nip = employeeId ? employeeIdToNip.get(employeeId) : null;
+    if (!nip) {
+      logger.warn(
+        `[WARN] Employee mapping missing for jabatan ${row.trx_jabatan_id}; skipping.`,
+      );
+      stats.skippedEmployeeMissing += 1;
+      continue;
+    }
     const tmtDate = row.trx_jabatan_tmt;
     const tmtString = formatDateDDMMYYYY(tmtDate);
     const datasetCandidates = await findDatasetRecord(datasetIndex, nip, tmtString);
@@ -498,6 +547,7 @@ async function main() {
   logger.info(`Missing file slots: ${stats.missingFiles}`);
   logger.info(`Dataset missing entries: ${stats.skippedDatasetMissing}`);
   logger.info(`Dataset missing doc uris: ${stats.skippedDocMissing}`);
+  logger.info(`Missing employee mappings: ${stats.skippedEmployeeMissing}`);
   if (!options.dryRun) {
     logger.info(`Files restored: ${stats.restored}`);
     logger.info(`File statuses reactivated: ${stats.reactivated}`);
