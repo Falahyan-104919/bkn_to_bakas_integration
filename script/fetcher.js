@@ -22,6 +22,10 @@ const parsedConcurrency = Number.parseInt(
   10,
 );
 const CONCURRENCY_LIMIT = 100;
+const DEFAULT_CONCURRENCY =
+  Number.isFinite(parsedConcurrency) && parsedConcurrency > 0
+    ? Math.min(parsedConcurrency, CONCURRENCY_LIMIT)
+    : Math.min(50, CONCURRENCY_LIMIT);
 const FORCE_REFRESH_JSON = false;
 const FORCE_REFRESH_FILES = false;
 const CLEAN_TEMP_BEFORE_DOWNLOAD = true;
@@ -30,6 +34,117 @@ const CLEAN_TEMP_BEFORE_DOWNLOAD = true;
 const DOWNLOAD_PATH = "/download-dok";
 const DOWNLOAD_DIR = path.join(__dirname, "..", "temp_downloads"); // This is our file staging folder
 // --- End Configuration ---
+
+function parseNipListInput(input) {
+  return input
+    .split(/[\s,]+/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function parseCliArgs(argv) {
+  const options = {
+    extraNipValues: [],
+    extraNipFiles: [],
+    useMasterList: true,
+    forceJsonRefresh: FORCE_REFRESH_JSON,
+    forceFileRefresh: FORCE_REFRESH_FILES,
+    concurrency: DEFAULT_CONCURRENCY,
+    help: false,
+  };
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    switch (arg) {
+      case "--extra-nips":
+      case "--nips":
+        if (i + 1 >= argv.length) {
+          throw new Error(`${arg} requires a comma/space separated list of NIPs.`);
+        }
+        options.extraNipValues.push(argv[++i]);
+        break;
+      case "--extra-nips-file":
+      case "--nips-file":
+        if (i + 1 >= argv.length) {
+          throw new Error(`${arg} requires a path to a file containing NIPs.`);
+        }
+        options.extraNipFiles.push(argv[++i]);
+        break;
+      case "--only-nips":
+        options.useMasterList = false;
+        break;
+      case "--force-json":
+        options.forceJsonRefresh = true;
+        break;
+      case "--force-files":
+        options.forceFileRefresh = true;
+        break;
+      case "--concurrency":
+        if (i + 1 >= argv.length) {
+          throw new Error("--concurrency requires a numeric value.");
+        }
+        {
+          const value = Number.parseInt(argv[++i], 10);
+          if (!Number.isFinite(value) || value <= 0) {
+            throw new Error("--concurrency must be a positive integer.");
+          }
+          options.concurrency = Math.min(value, CONCURRENCY_LIMIT);
+        }
+        break;
+      case "--help":
+      case "-h":
+        options.help = true;
+        break;
+      default:
+        throw new Error(`Unknown option: ${arg}`);
+    }
+  }
+
+  return options;
+}
+
+async function resolveExtraNips(options) {
+  const extraNips = new Set();
+
+  for (const chunk of options.extraNipValues) {
+    for (const nip of parseNipListInput(chunk)) {
+      extraNips.add(nip);
+    }
+  }
+
+  for (const filePath of options.extraNipFiles) {
+    const absolutePath = path.resolve(process.cwd(), filePath);
+    let contents;
+    try {
+      contents = await fs.readFile(absolutePath, "utf-8");
+    } catch (err) {
+      throw new Error(
+        `Unable to read NIP list file "${filePath}": ${err.message}`,
+      );
+    }
+    for (const nip of parseNipListInput(contents.replace(/\r/g, "\n"))) {
+      extraNips.add(nip);
+    }
+  }
+
+  return extraNips;
+}
+
+function printHelp() {
+  const lines = [
+    "Usage: node script/fetcher.js [options]",
+    "",
+    "Options:",
+    "  --extra-nips \"NIP1,NIP2\"   Add specific NIPs (comma or space separated).",
+    "  --extra-nips-file <path>    Load extra NIPs from file (comma/space/line separated).",
+    "  --only-nips                 Ignore ms_employee.json; process only the provided NIPs.",
+    "  --force-json                Re-fetch JSON even when a cached file exists.",
+    "  --force-files               Re-download files even when already downloaded.",
+    "  --concurrency <n>           Override concurrency (max 100).",
+    "  --help                      Show this message.",
+  ];
+  lines.forEach((line) => logger.info(line));
+}
 
 async function fetchDynamicToken() {
   logger.info(`[AUTH] Requesting new dynamic token from: ${TOKEN_URL}`);
@@ -248,6 +363,21 @@ async function fetchAndSaveAllData(
 }
 
 async function main() {
+  let cliOptions;
+  try {
+    cliOptions = parseCliArgs(process.argv.slice(2));
+  } catch (err) {
+    logger.error(`[ARGS] ${err.message}`);
+    printHelp();
+    process.exitCode = 1;
+    return;
+  }
+
+  if (cliOptions.help) {
+    printHelp();
+    return;
+  }
+
   logger.info("--- Starting Phase 1: Fetcher Script ---");
 
   if (
@@ -269,22 +399,67 @@ async function main() {
   await fs.mkdir(STAGING_DIR, { recursive: true });
   await fs.mkdir(DOWNLOAD_DIR, { recursive: true }); // <-- NEW
 
+  let extraNipSet;
+  try {
+    extraNipSet = await resolveExtraNips(cliOptions);
+  } catch (err) {
+    logger.error(`[ARGS] ${err.message}`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const nipSet = new Set();
+  if (cliOptions.useMasterList) {
+    MASTER_NIP_LIST.forEach((nip) => nipSet.add(nip));
+  }
+  extraNipSet.forEach((nip) => nipSet.add(nip));
+
+  if (!cliOptions.useMasterList && nipSet.size === 0) {
+    logger.error(
+      "[ARGS] --only-nips was specified but no additional NIPs were provided.",
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  if (nipSet.size === 0) {
+    logger.warn("No NIPs to process after applying filters. Exiting.");
+    return;
+  }
+
   const tokenRef = { current: await fetchDynamicToken() };
   const staticToken = STATIC_AUTH_TOKEN;
 
   if (!tokenRef.current) return;
 
-  logger.info(`--- Starting batch processing ---`);
-  logger.info(`Total NIPs to process: ${MASTER_NIP_LIST.length}`);
-  logger.info(`Concurrency limit set to: ${CONCURRENCY_LIMIT}`);
+  const finalNipList = Array.from(nipSet);
+  const concurrency = cliOptions.concurrency;
+  const fetchOptions = {
+    forceJsonRefresh: cliOptions.forceJsonRefresh,
+    forceFileRefresh: cliOptions.forceFileRefresh,
+  };
 
-  const queue = [...MASTER_NIP_LIST];
+  logger.info(`--- Starting batch processing ---`);
+  logger.info(
+    `Total NIPs to process: ${finalNipList.length} (master list ${cliOptions.useMasterList ? MASTER_NIP_LIST.length : 0}, extra ${extraNipSet.size})`,
+  );
+  logger.info(
+    `Concurrency set to: ${concurrency} (max ${CONCURRENCY_LIMIT})`,
+  );
+  if (cliOptions.forceJsonRefresh) {
+    logger.info("[CONFIG] JSON refresh forced for all NIPs.");
+  }
+  if (cliOptions.forceFileRefresh) {
+    logger.info("[CONFIG] File downloads forced for all NIPs.");
+  }
+
+  const queue = [...finalNipList];
 
   while (queue.length > 0) {
-    const batchNIPs = queue.splice(0, CONCURRENCY_LIMIT);
+    const batchNIPs = queue.splice(0, concurrency);
     const promises = batchNIPs.map((nip) =>
       // Renamed the function to be more descriptive
-      fetchAndSaveAllData(nip, tokenRef, staticToken),
+      fetchAndSaveAllData(nip, tokenRef, staticToken, fetchOptions),
     );
     await Promise.all(promises);
     logger.info(`--- Batch complete. ${queue.length} NIPs remaining. ---`);
