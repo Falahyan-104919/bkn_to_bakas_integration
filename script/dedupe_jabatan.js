@@ -228,6 +228,7 @@ async function findDuplicateGroups(nipFilter) {
     Prisma.sql`
       SELECT
         e.employee_nip AS nip,
+        j.trx_jabatan_employee_id AS employee_id,
         j.trx_jabatan_tmt AS tmt,
         COUNT(*) AS row_count
       FROM trx_jabatan j
@@ -242,15 +243,16 @@ async function findDuplicateGroups(nipFilter) {
 
   return results.map((row) => ({
     nip: row.nip,
+    employeeId: row.employee_id,
     tmt: row.tmt,
   }));
 }
 
-async function loadJabatanRows(nip, tmt) {
+async function loadJabatanRows(employeeId, tmt) {
   const parsedTmt = new Date(tmt);
   return prisma.trx_jabatan.findMany({
     where: {
-      ms_employee: { employee_nip: nip },
+      trx_jabatan_employee_id: employeeId,
       trx_jabatan_tmt: parsedTmt,
     },
     select: {
@@ -434,10 +436,10 @@ async function main() {
   };
 
   for (const group of duplicates) {
-    const { nip, tmt } = group;
+    const { nip, employeeId, tmt } = group;
     const tmtDate = new Date(tmt);
     const tmtString = formatDateDDMMYYYY(tmtDate);
-    const rows = await loadJabatanRows(nip, tmt);
+    const rows = await loadJabatanRows(employeeId, tmt);
     stats.rowsReviewed += rows.length;
 
     if (rows.length < 2) continue;
