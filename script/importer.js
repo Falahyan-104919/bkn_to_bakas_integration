@@ -424,7 +424,13 @@ async function processRecordsForNip(nip, records) {
 function parseCliArgs(argv) {
   const options = {
     datasetPath: null,
-    nips: [],
+    extraNipValues: [],
+    extraNipFiles: [],
+    positionalNips: [],
+    onlyNips: false,
+    useDatasetDefault: true,
+    dryRun: false,
+    limit: null,
     help: false,
   };
 
@@ -437,6 +443,41 @@ function parseCliArgs(argv) {
         }
         options.datasetPath = argv[++i];
         break;
+      case "--extra-nips":
+      case "--nips":
+        if (i + 1 >= argv.length) {
+          throw new Error(`${arg} requires a comma/space separated list of NIPs.`);
+        }
+        options.extraNipValues.push(argv[++i]);
+        break;
+      case "--extra-nips-file":
+      case "--nips-file":
+        if (i + 1 >= argv.length) {
+          throw new Error(`${arg} requires a file path containing NIPs.`);
+        }
+        options.extraNipFiles.push(argv[++i]);
+        break;
+      case "--only-nips":
+        options.onlyNips = true;
+        break;
+      case "--no-default-dataset":
+        options.useDatasetDefault = false;
+        break;
+      case "--dry-run":
+        options.dryRun = true;
+        break;
+      case "--limit":
+        if (i + 1 >= argv.length) {
+          throw new Error("--limit requires a numeric value.");
+        }
+        {
+          const value = Number.parseInt(argv[++i], 10);
+          if (!Number.isFinite(value) || value <= 0) {
+            throw new Error("--limit must be a positive integer.");
+          }
+          options.limit = value;
+        }
+        break;
       case "--help":
       case "-h":
         options.help = true;
@@ -446,19 +487,9 @@ function parseCliArgs(argv) {
           throw new Error(`Unknown option: ${arg}`);
         }
         if (arg.trim().length > 0) {
-          options.nips.push(arg.trim());
+          options.positionalNips.push(arg.trim());
         }
         break;
-    }
-  }
-
-  if (!options.datasetPath) {
-    const defaultCandidate = path.join(STAGING_DATA_DIR, DEFAULT_DATASET_FILENAME);
-    options.datasetPath = null;
-    if (options.nips.length === 0 && fs.existsSync(defaultCandidate)) {
-      logger.info(
-        `[CONFIG] Detected ${DEFAULT_DATASET_FILENAME}. Run with '--dataset ${path.relative(process.cwd(), defaultCandidate)}' to use the merged dataset.`,
-      );
     }
   }
 
@@ -470,11 +501,17 @@ function printHelp() {
     "Usage: node script/importer.js [options] [NIP ...]",
     "",
     "Options:",
-    "  --dataset <path>   Import from a merged JSON array (e.g. staging_data/1-final.json).",
-    "  --help             Show this message.",
+    "  --dataset <path>         Import from a merged JSON array (e.g. staging_data/1-final.json).",
+    "  --extra-nips \"A,B\"       Add specific NIPs (comma/space separated).",
+    "  --extra-nips-file <path> Load NIPs from a file (one per line or comma separated).",
+    "  --only-nips              Process only supplied NIPs (skip staging directory scan).",
+    "  --no-default-dataset     Do not auto-detect staging_data/1-final.json.",
+    "  --dry-run                Print planned work without writing to DB.",
+    "  --limit <n>              Process at most <n> NIPs.",
+    "  --help                   Show this message.",
     "",
     "Without --dataset the importer reads per-NIP JSON files under staging_data.",
-    "Provide one or more NIP arguments to limit processing to specific employees.",
+    "Provide NIPs as positional arguments or via --extra-nips/--extra-nips-file.",
   ];
   lines.forEach((line) => logger.info(line));
 }
@@ -520,6 +557,68 @@ function groupRecordsByNip(records, nipFilterSet) {
   }
 
   return groups;
+}
+
+/**
+ * Builds the set of target NIPs based on CLI options and dataset detection.
+ * @param {*} options
+ * @returns {Promise<{ datasetPath: string | null, nipList: string[], useDataset: boolean }>}
+ */
+async function buildProcessingPlan(options) {
+  const nipSet = new Set();
+
+  const addNips = (values) => {
+    for (const value of values) {
+      if (!value) continue;
+      const parts = value
+        .split(/[\s,]+/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+      for (const part of parts) {
+        nipSet.add(part);
+      }
+    }
+  };
+
+  addNips(options.positionalNips);
+  addNips(options.extraNipValues);
+
+  for (const filePath of options.extraNipFiles) {
+    const absolute = path.resolve(process.cwd(), filePath);
+    let contents;
+    try {
+      contents = await fsp.readFile(absolute, "utf-8");
+    } catch (err) {
+      throw new Error(`Unable to read NIP list file "${filePath}": ${err.message}`);
+    }
+    addNips([contents.replace(/\r/g, "\n")]);
+  }
+
+  let datasetPath = null;
+  if (options.datasetPath) {
+    datasetPath = path.resolve(process.cwd(), options.datasetPath);
+  } else if (options.useDatasetDefault) {
+    const defaultCandidate = path.join(STAGING_DATA_DIR, DEFAULT_DATASET_FILENAME);
+    if (fs.existsSync(defaultCandidate)) {
+      datasetPath = defaultCandidate;
+      logger.info(
+        `[CONFIG] Detected ${DEFAULT_DATASET_FILENAME}. Using it as dataset unless --no-default-dataset is provided.`,
+      );
+    }
+  }
+
+  if (options.onlyNips && nipSet.size === 0) {
+    throw new Error(
+      "--only-nips was specified but no NIPs were provided via positional args or --extra-* options.",
+    );
+  }
+
+  const nipList = Array.from(nipSet);
+  if (options.limit && nipList.length > options.limit) {
+    return { datasetPath, nipList: nipList.slice(0, options.limit), useDataset: Boolean(datasetPath) };
+  }
+
+  return { datasetPath, nipList, useDataset: Boolean(datasetPath) };
 }
 
 /**
@@ -580,20 +679,27 @@ async function main() {
 
   logger.info("--- Starting Standalone Importer (Jabatan Upsert) Script ---");
 
-  if (options.datasetPath) {
-    const datasetAbsolute = path.resolve(process.cwd(), options.datasetPath);
+  let processingPlan;
+  try {
+    processingPlan = await buildProcessingPlan(options);
+  } catch (err) {
+    logger.error(`[ARGS] ${err.message}`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const { datasetPath, nipList, useDataset } = processingPlan;
+  const nipFilter =
+    nipList.length > 0 ? new Set(nipList.map((nip) => nip.trim()).filter(Boolean)) : null;
+
+  if (useDataset) {
     let datasetRecords;
     try {
-      datasetRecords = await loadDatasetRecords(datasetAbsolute);
+      datasetRecords = await loadDatasetRecords(datasetPath);
     } catch (err) {
-      logger.error(`[FAIL] Unable to read dataset ${datasetAbsolute}: ${err.message}`);
+      logger.error(`[FAIL] Unable to read dataset ${datasetPath}: ${err.message}`);
       throw err;
     }
-
-    const nipFilter =
-      options.nips.length > 0
-        ? new Set(options.nips.map((nip) => nip.trim()).filter(Boolean))
-        : null;
 
     const grouped = groupRecordsByNip(datasetRecords, nipFilter);
 
@@ -601,23 +707,38 @@ async function main() {
       logger.warn("[DATASET] No records matched the provided filters.");
     }
 
+    if (options.dryRun) {
+      for (const [nip, records] of grouped.entries()) {
+        logger.info(
+          `[DRY-RUN] Would process NIP ${nip} with ${records.length} record(s) from dataset ${path.basename(datasetPath)}`,
+        );
+      }
+      logger.info("[DRY-RUN] No database changes were made.");
+      return;
+    }
+
     for (const [nip, records] of grouped.entries()) {
       await processRecordsForNip(nip, records);
     }
   } else {
     const files = await fsp.readdir(STAGING_DATA_DIR);
-    const nipFilter =
-      options.nips.length > 0
-        ? new Set(options.nips.map((nip) => nip.trim()).filter(Boolean))
-        : null;
-
+    const limitedFiles = options.limit ? files.slice(0, options.limit) : files;
     for (const file of files) {
       if (!file.endsWith(".json")) continue;
 
       const nip = path.basename(file, ".json");
       if (nipFilter && !nipFilter.has(nip)) continue;
 
+      if (options.dryRun) {
+        logger.info(`[DRY-RUN] Would process NIP ${nip} from staging_data/${file}`);
+        continue;
+      }
+
       await processNip(nip);
+    }
+
+    if (options.dryRun) {
+      logger.info("[DRY-RUN] No database changes were made.");
     }
   }
 
