@@ -4,7 +4,7 @@ const fs = require("fs");
 const fsp = fs.promises;
 const path = require("path");
 const { PrismaClient } = require("@prisma/client");
-const logger = require("./logger");
+const logger = require("../logger");
 
 const prisma = new PrismaClient();
 
@@ -123,10 +123,15 @@ function parseCliArgs(argv) {
   }
 
   if (!options.datasetPath) {
-    const defaultCandidate = path.join(STAGING_DATA_DIR, DEFAULT_DATASET_FILENAME);
+    const defaultCandidate = path.join(
+      STAGING_DATA_DIR,
+      DEFAULT_DATASET_FILENAME,
+    );
     if (fs.existsSync(defaultCandidate)) {
       options.datasetPath = defaultCandidate;
-      logger.info(`[CONFIG] Using default dataset ${DEFAULT_DATASET_FILENAME}.`);
+      logger.info(
+        `[CONFIG] Using default dataset ${DEFAULT_DATASET_FILENAME}.`,
+      );
     } else {
       throw new Error(
         "Dataset path is required. Provide --dataset <path> or place 1-final.json in staging_data.",
@@ -464,7 +469,9 @@ async function main() {
   logger.info("--- Cleanup Summary ---");
   logger.info(`Records inspected: ${stats.totalRecords}`);
   logger.info(`Record entries unchanged: ${stats.unchanged}`);
-  logger.info(`Unlink operations ${options.dryRun ? "(would run)" : "executed"}: ${stats.toUnlink}`);
+  logger.info(
+    `Unlink operations ${options.dryRun ? "(would run)" : "executed"}: ${stats.toUnlink}`,
+  );
   logger.info(`Employees missing: ${stats.employeeMissing}`);
   logger.info(`Jabatan rows missing: ${stats.jabatanMissing}`);
   logger.info(`Invalid TMT skipped: ${stats.invalidTmt}`);

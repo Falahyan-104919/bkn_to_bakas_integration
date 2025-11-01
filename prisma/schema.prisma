@@ -116,6 +116,7 @@ model ms_employee {
   employee_bkn                String?   @db.VarChar(255)
   employee_facereg            Int?      @db.TinyInt
 
+  @@unique([employee_nip, employee_nik], map: "NIP_NIK")
   @@index([employee_fullname, employee_gender, employee_religion, employee_status, employee_kelurahan_id, employee_pensiun_id], map: "NAME")
   @@index([employee_nip], map: "NIP")
 }
@@ -930,6 +931,7 @@ model sys_user {
   user_log_code        String?   @db.VarChar(255)
   user_default_role_id Int?
 
+  @@unique([user_nip], map: "user_nip")
   @@index([user_access_id, user_default_role_id, user_status], map: "IDS")
   @@index([user_nip, user_name], map: "NAME")
 }

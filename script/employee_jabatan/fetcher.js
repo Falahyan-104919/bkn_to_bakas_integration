@@ -4,7 +4,7 @@ const fss = require("fs"); // Use non-promise 'fs' for createWriteStream
 const path = require("path");
 const axios = require("axios");
 const { URLSearchParams } = require("url");
-const logger = require("./logger");
+const logger = require("../logger");
 
 // --- Configuration ---
 const API_BASE_URL = process.env.API_BASE_URL;
@@ -14,7 +14,7 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const STATIC_AUTH_TOKEN = process.env.STATIC_AUTH_TOKEN;
 
 // Config for JSON staging
-const masterEmployeeData = require("../ms_employee.json");
+const masterEmployeeData = require("../../ms_employee.json");
 const MASTER_NIP_LIST = masterEmployeeData.map((emp) => emp.employee_nip);
 const STAGING_DIR = path.join(__dirname, "..", "staging_data");
 const parsedConcurrency = Number.parseInt(
@@ -59,7 +59,9 @@ function parseCliArgs(argv) {
       case "--extra-nips":
       case "--nips":
         if (i + 1 >= argv.length) {
-          throw new Error(`${arg} requires a comma/space separated list of NIPs.`);
+          throw new Error(
+            `${arg} requires a comma/space separated list of NIPs.`,
+          );
         }
         options.extraNipValues.push(argv[++i]);
         break;
@@ -135,7 +137,7 @@ function printHelp() {
     "Usage: node script/fetcher.js [options]",
     "",
     "Options:",
-    "  --extra-nips \"NIP1,NIP2\"   Add specific NIPs (comma or space separated).",
+    '  --extra-nips "NIP1,NIP2"   Add specific NIPs (comma or space separated).',
     "  --extra-nips-file <path>    Load extra NIPs from file (comma/space/line separated).",
     "  --only-nips                 Ignore ms_employee.json; process only the provided NIPs.",
     "  --force-json                Re-fetch JSON even when a cached file exists.",
@@ -443,9 +445,7 @@ async function main() {
   logger.info(
     `Total NIPs to process: ${finalNipList.length} (master list ${cliOptions.useMasterList ? MASTER_NIP_LIST.length : 0}, extra ${extraNipSet.size})`,
   );
-  logger.info(
-    `Concurrency set to: ${concurrency} (max ${CONCURRENCY_LIMIT})`,
-  );
+  logger.info(`Concurrency set to: ${concurrency} (max ${CONCURRENCY_LIMIT})`);
   if (cliOptions.forceJsonRefresh) {
     logger.info("[CONFIG] JSON refresh forced for all NIPs.");
   }
