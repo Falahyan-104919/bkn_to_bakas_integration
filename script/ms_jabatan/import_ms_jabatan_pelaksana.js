@@ -53,49 +53,59 @@ const buildMSJabatan = async (value) => {
 const persistMSJabatan = async (jabatan) => {
   const baseData = await buildMSJabatan(jabatan);
   const now = new Date();
-  return prisma.$transaction(async (tx) => {
-    try {
-      const { jabatan_id } = await tx.ms_jabatan.upsert({
-        where: {
-          jabatan_kode: baseData.jabatan_kode,
-        },
-        create: {
-          ...baseData,
-          jabatan_create_by: SUPERADMIN_ID,
-          jabatan_create_date: now,
-        },
-        update: {
-          ...baseData,
-          jabatan_create_by: SUPERADMIN_ID,
-          jabatan_create_date: now,
-        },
-      });
-      return { jabatan_id };
-    } catch (error) {
-      logger.error("[IMPORT] failed to import MS Jabatan Pelaksana", error);
-    }
-  });
+
+  try {
+    const { jabatan_id } = await prisma.ms_jabatan.upsert({
+      where: {
+        jabatan_kode: baseData.jabatan_kode,
+      },
+      create: {
+        ...baseData,
+        jabatan_create_by: SUPERADMIN_ID,
+        jabatan_create_date: now,
+      },
+      update: {
+        ...baseData,
+        jabatan_create_by: SUPERADMIN_ID,
+        jabatan_create_date: now,
+      },
+    });
+    return { jabatan_id };
+  } catch (error) {
+    logger.error("[IMPORT] failed to import MS Jabatan Pelaksana", error);
+    throw error;
+  }
 };
 
 const importAllMSJabatan = async () => {
-  const parser = parse({
-    columns: true,
-    skip_empty_lines: true,
-    delimiter: ";",
-  });
   try {
-    fs.createReadStream(PATH_CSV)
-      .pipe(parser)
-      .on("data", async (record) => {
+    const parser = fs
+      .createReadStream(PATH_CSV)
+      .pipe(
+        parse({
+          columns: true,
+          skip_empty_lines: true,
+          delimiter: ";",
+        }),
+      );
+
+    let processedCount = 0;
+
+    for await (const record of parser) {
+      try {
         await persistMSJabatan(record);
+        processedCount += 1;
         logger.info(`[IMPORT] Imported ${record.ID}`);
-      })
-      .on("end", () => {
-        logger.info(`[IMPORT] Finished importing all MS Jabatan Pelaksana`);
-      })
-      .on("error", (error) => {
-        logger.error(`[IMPORT] Failed to process: ${error.message}`);
-      });
+      } catch (error) {
+        logger.error(
+          `[IMPORT] Skipped record ${record.ID}: ${error.message}`,
+        );
+      }
+    }
+
+    logger.info(
+      `[IMPORT] Finished importing MS Jabatan Pelaksana. Total processed: ${processedCount}`,
+    );
   } catch (error) {
     logger.error(`[IMPORT] Failed to to read csv : ${error.message}`);
   }
