@@ -1,0 +1,28 @@
+{
+  "code": 1,
+  "data": [
+    {
+      "id": "4bec9759-c87c-4eb2-a628-78112bfa3047",
+      "idPns": "a91eb488-5070-4bde-912d-2e322867a45b",
+      "nipBaru": "199304202024212047",
+      "nipLama": "",
+      "golonganId": "31",
+      "golongan": "III/a",
+      "skNomor": "823/135/KPTS/IV.05/2024",
+      "skTanggal": "05-03-2024",
+      "tmtGolongan": "2024-03-01T00:00:00Z",
+      "noPertekBkn": "FR-21801000231",
+      "tglPertekBkn": "06-02-2024",
+      "jumlahKreditUtama": "0",
+      "jumlahKreditTambahan": "0",
+      "jenisKPId": "211",
+      "jenisKPNama": "Gol. dari Pengadaan CPNS/PNS",
+      "masaKerjaGolonganTahun": "0",
+      "masaKerjaGolonganBulan": "0",
+      "path": null,
+      "pangkat": "Penata Muda",
+      "createdAt": "21-05-2024",
+      "updatedAt": null
+    }
+  ]
+}

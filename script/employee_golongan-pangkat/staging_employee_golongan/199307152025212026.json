@@ -1,0 +1,28 @@
+{
+  "code": 1,
+  "data": [
+    {
+      "id": "0f7a5afd-3784-46b9-8dc8-d3f3b37f1bf9",
+      "idPns": "71f64557-d57e-4b25-8ad1-eb1f606c7ec9",
+      "nipBaru": "199307152025212026",
+      "nipLama": "",
+      "golonganId": "21",
+      "golongan": "II/a",
+      "skNomor": "B/70/KPTS/IV.05/2025",
+      "skTanggal": "30-04-2025",
+      "tmtGolongan": "2025-04-01T00:00:00Z",
+      "noPertekBkn": "FR-21801000009",
+      "tglPertekBkn": "05-03-2025",
+      "jumlahKreditUtama": "0",
+      "jumlahKreditTambahan": "0",
+      "jenisKPId": "211",
+      "jenisKPNama": "Gol. dari Pengadaan CPNS/PNS",
+      "masaKerjaGolonganTahun": "0",
+      "masaKerjaGolonganBulan": "0",
+      "path": null,
+      "pangkat": "Pengatur Muda",
+      "createdAt": "23-06-2025",
+      "updatedAt": null
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "code": 1,
+  "data": [
+    {
+      "id": "8ae483a67f9728d1017fa84b9be33d57",
+      "idPns": "ff8080817a9743bf017a9881fce10b9a",
+      "nipBaru": "197807072022211003",
+      "nipLama": "",
+      "golonganId": "31",
+      "golongan": "III/a",
+      "skNomor": "B/82/KPTS/IV.04/2022",
+      "skTanggal": "12-04-2022",
+      "tmtGolongan": "2022-03-01T00:00:00Z",
+      "noPertekBkn": "FR-21801000337",
+      "tglPertekBkn": "28-02-2022",
+      "jumlahKreditUtama": "0",
+      "jumlahKreditTambahan": "0",
+      "jenisKPId": "211",
+      "jenisKPNama": "Gol. dari Pengadaan CPNS/PNS",
+      "masaKerjaGolonganTahun": "0",
+      "masaKerjaGolonganBulan": "0",
+      "path": null,
+      "pangkat": "Penata Muda",
+      "createdAt": "18-04-2022",
+      "updatedAt": "18-04-2022"
+    }
+  ]
+}

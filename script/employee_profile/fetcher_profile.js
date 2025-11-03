@@ -13,8 +13,8 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const STATIC_AUTH_TOKEN = process.env.STATIC_AUTH_TOKEN;
 
-const masterP3K = require("./ms_p3k.json");
-const MASTER_NIP_LIST = masterP3K.map((emp) => emp["NIP BARU"]);
+const masterEmployee = require("../../ms_employee.json");
+const MASTER_NIP_LIST = masterEmployee.map((emp) => emp.employee_nip);
 const STAGING_DIR = path.join(__dirname, "staging_employee");
 const CONCURRENCY = 100;
 

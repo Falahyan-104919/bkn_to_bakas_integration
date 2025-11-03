@@ -1,0 +1,36 @@
+{
+  "code": 1,
+  "data": [
+    {
+      "id": "5b98e7de-26c5-445b-816e-89622d27aac5",
+      "idPns": "edb3e19a-f966-4a1a-9299-c74e71485fd8",
+      "nipBaru": "198809272023212006",
+      "nipLama": "",
+      "golonganId": "31",
+      "golongan": "III/a",
+      "skNomor": "823/105/KPTS/IV.04/2023",
+      "skTanggal": "03-07-2023",
+      "tmtGolongan": "2023-06-01T00:00:00Z",
+      "noPertekBkn": "FR-21801000010",
+      "tglPertekBkn": "16-05-2023",
+      "jumlahKreditUtama": "0",
+      "jumlahKreditTambahan": "0",
+      "jenisKPId": "211",
+      "jenisKPNama": "Gol. dari Pengadaan CPNS/PNS",
+      "masaKerjaGolonganTahun": "0",
+      "masaKerjaGolonganBulan": "0",
+      "path": {
+        "50": {
+          "dok_id": "50",
+          "dok_nama": "Dok SK PPPK/SK Petikan PPPK",
+          "dok_uri": "sk-instansi-A5EB03E23C37F6A0E040640A040252AD/INS.SK.02.01/sign-final/5dbab5a42dd0f7b5ccb073f3edae71f1ce060f7ab70cdcd1fc8cb5f6-2023-07-26T09:51:22.896/5dbab5a42dd0f7b5ccb073f3edae71f1ce060f7ab70cdcd1fc8cb5f6-2023-07-26T09:51:22.896.pdf",
+          "object": "sk-instansi-A5EB03E23C37F6A0E040640A040252AD/INS.SK.02.01/sign-final/5dbab5a42dd0f7b5ccb073f3edae71f1ce060f7ab70cdcd1fc8cb5f6-2023-07-26T09:51:22.896/5dbab5a42dd0f7b5ccb073f3edae71f1ce060f7ab70cdcd1fc8cb5f6-2023-07-26T09:51:22.896.pdf",
+          "slug": "50"
+        }
+      },
+      "pangkat": "Penata Muda",
+      "createdAt": "03-07-2025",
+      "updatedAt": null
+    }
+  ]
+}

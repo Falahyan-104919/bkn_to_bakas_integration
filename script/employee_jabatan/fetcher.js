@@ -14,9 +14,9 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const STATIC_AUTH_TOKEN = process.env.STATIC_AUTH_TOKEN;
 
 // Config for JSON staging
-const masterEmployeeData = require("../../ms_employee.json");
-const MASTER_NIP_LIST = masterEmployeeData.map((emp) => emp.employee_nip);
-const STAGING_DIR = path.join(__dirname, "..", "staging_data");
+const masterEmployeeData = require("../employee_profile/ms_p3k.json");
+const MASTER_NIP_LIST = masterEmployeeData.map((emp) => emp["NIP BARU"]);
+const STAGING_DIR = path.join(__dirname, "staging_data");
 const parsedConcurrency = Number.parseInt(
   process.env.CONCURRENCY_LIMIT ?? "50",
   10,
@@ -32,7 +32,7 @@ const CLEAN_TEMP_BEFORE_DOWNLOAD = true;
 
 // --- NEW: Config for File Downloading ---
 const DOWNLOAD_PATH = "/download-dok";
-const DOWNLOAD_DIR = path.join(__dirname, "..", "temp_downloads"); // This is our file staging folder
+const DOWNLOAD_DIR = path.join(__dirname, "temp_downloads"); // This is our file staging folder
 // --- End Configuration ---
 
 function parseNipListInput(input) {

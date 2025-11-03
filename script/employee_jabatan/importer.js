@@ -9,8 +9,8 @@ const logger = require("./logger");
 const prisma = new PrismaClient();
 
 // --- CONFIGURATION ---
-const STAGING_DATA_DIR = path.join(__dirname, "..", "staging_data");
-const STAGING_FILES_DIR = path.join(__dirname, "..", "temp_downloads");
+const STAGING_DATA_DIR = path.join(__dirname, "staging_data");
+const STAGING_FILES_DIR = path.join(__dirname, "temp_downloads");
 const SUPERADMIN_ID = 1;
 const STATUS_SYNC_BKN = 3;
 
@@ -181,7 +181,9 @@ function resolveRecordNip(record) {
  */
 async function processRecordsForNip(nip, records) {
   if (!records || !Array.isArray(records) || records.length === 0) {
-    logger.warn(`No history records found or data is not an array for NIP: ${nip}`);
+    logger.warn(
+      `No history records found or data is not an array for NIP: ${nip}`,
+    );
     return false;
   }
 
@@ -446,7 +448,9 @@ function parseCliArgs(argv) {
       case "--extra-nips":
       case "--nips":
         if (i + 1 >= argv.length) {
-          throw new Error(`${arg} requires a comma/space separated list of NIPs.`);
+          throw new Error(
+            `${arg} requires a comma/space separated list of NIPs.`,
+          );
         }
         options.extraNipValues.push(argv[++i]);
         break;
@@ -502,7 +506,7 @@ function printHelp() {
     "",
     "Options:",
     "  --dataset <path>         Import from a merged JSON array (e.g. staging_data/1-final.json).",
-    "  --extra-nips \"A,B\"       Add specific NIPs (comma/space separated).",
+    '  --extra-nips "A,B"       Add specific NIPs (comma/space separated).',
     "  --extra-nips-file <path> Load NIPs from a file (one per line or comma separated).",
     "  --only-nips              Process only supplied NIPs (skip staging directory scan).",
     "  --no-default-dataset     Do not auto-detect staging_data/1-final.json.",
@@ -589,7 +593,9 @@ async function buildProcessingPlan(options) {
     try {
       contents = await fsp.readFile(absolute, "utf-8");
     } catch (err) {
-      throw new Error(`Unable to read NIP list file "${filePath}": ${err.message}`);
+      throw new Error(
+        `Unable to read NIP list file "${filePath}": ${err.message}`,
+      );
     }
     addNips([contents.replace(/\r/g, "\n")]);
   }
@@ -598,7 +604,10 @@ async function buildProcessingPlan(options) {
   if (options.datasetPath) {
     datasetPath = path.resolve(process.cwd(), options.datasetPath);
   } else if (options.useDatasetDefault) {
-    const defaultCandidate = path.join(STAGING_DATA_DIR, DEFAULT_DATASET_FILENAME);
+    const defaultCandidate = path.join(
+      STAGING_DATA_DIR,
+      DEFAULT_DATASET_FILENAME,
+    );
     if (fs.existsSync(defaultCandidate)) {
       datasetPath = defaultCandidate;
       logger.info(
@@ -615,7 +624,11 @@ async function buildProcessingPlan(options) {
 
   const nipList = Array.from(nipSet);
   if (options.limit && nipList.length > options.limit) {
-    return { datasetPath, nipList: nipList.slice(0, options.limit), useDataset: Boolean(datasetPath) };
+    return {
+      datasetPath,
+      nipList: nipList.slice(0, options.limit),
+      useDataset: Boolean(datasetPath),
+    };
   }
 
   return { datasetPath, nipList, useDataset: Boolean(datasetPath) };
@@ -690,14 +703,18 @@ async function main() {
 
   const { datasetPath, nipList, useDataset } = processingPlan;
   const nipFilter =
-    nipList.length > 0 ? new Set(nipList.map((nip) => nip.trim()).filter(Boolean)) : null;
+    nipList.length > 0
+      ? new Set(nipList.map((nip) => nip.trim()).filter(Boolean))
+      : null;
 
   if (useDataset) {
     let datasetRecords;
     try {
       datasetRecords = await loadDatasetRecords(datasetPath);
     } catch (err) {
-      logger.error(`[FAIL] Unable to read dataset ${datasetPath}: ${err.message}`);
+      logger.error(
+        `[FAIL] Unable to read dataset ${datasetPath}: ${err.message}`,
+      );
       throw err;
     }
 
@@ -730,7 +747,9 @@ async function main() {
       if (nipFilter && !nipFilter.has(nip)) continue;
 
       if (options.dryRun) {
-        logger.info(`[DRY-RUN] Would process NIP ${nip} from staging_data/${file}`);
+        logger.info(
+          `[DRY-RUN] Would process NIP ${nip} from staging_data/${file}`,
+        );
         continue;
       }
 

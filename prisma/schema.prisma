@@ -114,11 +114,12 @@ model ms_employee {
   employee_pmk_tmt            DateTime? @db.Date
   employee_status_asn         Int?
   employee_bkn                String?   @db.VarChar(255)
-  employee_facereg            Int?      @db.TinyInt
+  employee_facereg            Boolean?
 
-  @@unique([employee_nip, employee_nik], map: "NIP_NIK")
+  @@unique([employee_nip], map: "NIP UNIQUE")
+  @@unique([employee_nip, employee_nik], map: "NIP NIK")
   @@index([employee_fullname, employee_gender, employee_religion, employee_status, employee_kelurahan_id, employee_pensiun_id], map: "NAME")
-  @@index([employee_nip], map: "NIP")
+  @@index([employee_nip, employee_status_asn], map: "NIP")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -294,6 +295,7 @@ model ms_golongan {
   golongan_status      Int?
   golongan_p3k         String?   @db.VarChar(255)
 
+  @@unique([golongan_kode], map: "KODE")
   @@index([golongan_nama, golongan_pangkat], map: "NAME")
 }
 
@@ -500,18 +502,6 @@ model ms_kelurahan {
   @@index([kelurahan_kode, kelurahan_kecamatan_kode, kelurahan_nama], map: "NAME")
 }
 
-model ms_koordinat {
-  koordinat_id          Int       @id @default(autoincrement())
-  koordinat_org_id      Int?
-  koordinat_name        String?   @db.VarChar(255)
-  koordinat_longitude   String?   @db.VarChar(255)
-  koordinat_status      Int?
-  koordinat_create_by   Int?
-  koordinat_create_date DateTime? @db.DateTime(0)
-  koordinat_latitude    String?   @db.VarChar(255)
-  koordinat_radius      Int?
-}
-
 model ms_kota {
   kota_id            Int       @id @unique(map: "ID") @default(autoincrement())
   kota_provinsi_kode String?   @db.VarChar(255)
@@ -562,7 +552,7 @@ model ms_organization {
   organization_alamat      String?   @db.VarChar(255)
   organization_code        String?   @db.VarChar(255)
   organization_bkn_id      String?   @db.VarChar(255)
-  organization_bkn_nama    String?   @db.VarChar(255)
+  organization_bkn_name    String?   @db.VarChar(255)
 
   @@index([organization_status, organization_code, organization_name], map: "NAME")
   @@index([organization_parent_id], map: "PARENT")
@@ -931,7 +921,7 @@ model sys_user {
   user_log_code        String?   @db.VarChar(255)
   user_default_role_id Int?
 
-  @@unique([user_nip], map: "user_nip")
+  @@unique([user_nip], map: "NIP UNIQUE")
   @@index([user_access_id, user_default_role_id, user_status], map: "IDS")
   @@index([user_nip, user_name], map: "NAME")
 }
@@ -1301,11 +1291,10 @@ model trx_jabatan {
   trx_jabatan_ket                  String?   @db.VarChar(255)
   trx_jabatan_type                 Int?
   trx_jabatan_sampai               DateTime? @db.Date
-  trx_jabatan_bkn_id               String?   @db.VarChar(255)
+  trx_jabatan_bkn                  String?   @db.VarChar(255)
   trx_jabatan_file_spp             Int?
   trx_jabatan_file_ba              Int?
 
-  @@unique([trx_jabatan_employee_id, trx_jabatan_tmt], map: "uniq_employee_tmt")
   @@index([trx_jabatan_employee_id, trx_jabatan_jabatan_id, trx_jabatan_organization_id, trx_jabatan_tmt, trx_jabatan_file_id, trx_jabatan_status, trx_jabatan_jenis_sk, trx_jabatan_status_jabatan, trx_jabatan_type, trx_jabatan_sampai, trx_jabatan_instansi_type, trx_jabatan_instansi], map: "IDS")
 }
 
@@ -1437,4 +1426,42 @@ model trx_tukin_rekap {
   rekap_update_by        DateTime? @db.DateTime(0)
   rekap_update_date      DateTime? @db.DateTime(0)
   rekap_status           Int?
+}
+
+model trx_pangkat {
+  pangkat_id                   Int       @id @unique(map: "ID") @default(autoincrement())
+  pangkat_employee_id          Int?
+  pangkat_golongan_id          Int?
+  pangkat_tanggal_tmt_golongan DateTime? @db.Date
+  pangkat_pejabat_sk           String?   @db.VarChar(255)
+  pangkat_nomor_sk             String?   @db.VarChar(255)
+  pangkat_tanggal_sk           DateTime? @db.Date
+  pangkat_create_date          DateTime? @db.DateTime(0)
+  pangkat_create_by            Int?
+  pangkat_status               Int?
+  pangkat_jenis_sk             Int?
+  pangkat_update_date          DateTime? @db.DateTime(0)
+  pangkat_update_by            Int?
+  pangkat_file_id              Int?
+  pangkat_nomor_sk_bkn         String?   @db.VarChar(255)
+  pangkat_tanggal_sk_bkn       DateTime? @db.Date
+  pangkat_jenis_kenaikan       Int?
+  pangkat_ket                  String?   @db.VarChar(255)
+  pangkat_masa_kerja_tahun     Int?
+  pangkat_masa_kerja_bulan     Int?
+
+  @@unique([pangkat_employee_id, pangkat_tanggal_tmt_golongan], map: "NAMA_SK")
+  @@index([pangkat_employee_id, pangkat_golongan_id, pangkat_tanggal_tmt_golongan, pangkat_nomor_sk_bkn, pangkat_tanggal_sk_bkn, pangkat_jenis_kenaikan, pangkat_jenis_sk, pangkat_file_id, pangkat_status, pangkat_masa_kerja_tahun, pangkat_masa_kerja_bulan], map: "IDS")
+}
+
+model trx_shift {
+  shift_id          Int       @id @default(autoincrement())
+  shift_employee_id Int?
+  shift_shift_id    Int?
+  shift_tgl_mulai   DateTime? @db.DateTime(0)
+  shift_create_date DateTime? @db.DateTime(0)
+  shift_create_by   Int?
+  shift_update_date DateTime? @db.DateTime(0)
+  shift_update_by   DateTime? @db.DateTime(0)
+  shift_status      Int?
 }
