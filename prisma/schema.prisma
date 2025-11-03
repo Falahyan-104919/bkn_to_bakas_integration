@@ -361,6 +361,7 @@ model ms_jabatan {
   jabatan_jenjang         String?   @db.VarChar(255)
   jabatan_kelompok        String?   @db.VarChar(255)
 
+  @@unique([jabatan_kode], map: "KODE")
   @@index([jabatan_nama, jabatan_organization_id, jabatan_eselon_id, jabatan_tipe, jabatan_kepegawaian, jabatan_status], map: "NAME")
 }
 
@@ -930,6 +931,8 @@ model sys_userrole {
   id     Int @id @default(autoincrement())
   userId Int
   roleId Int
+
+  @@unique([userId, roleId], map: "USER_ROLE_UNIQUE")
 }
 
 model token {

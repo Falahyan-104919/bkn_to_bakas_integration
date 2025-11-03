@@ -15,7 +15,7 @@ const STATIC_AUTH_TOKEN = process.env.STATIC_AUTH_TOKEN;
 
 const masterP3K = require("../employee_profile/ms_p3k.json");
 const MASTER_NIP_LIST = masterP3K.map((emp) => emp["NIP BARU"]);
-const STAGING_DIR = path.join(__dirname, "staging_employee_golongan");
+const STAGING_DIR = path.join(__dirname, "staging_golongan");
 const CONCURRENCY = 100;
 
 async function fetchDynamicToken() {

@@ -58,6 +58,8 @@ const buildEmployeeData = async (profile) => {
     },
   });
 
+  const jenisPNS = parseInt(profile.kedudukanPnsId) == 71 ? 2 : 1;
+
   const data = {
     employee_fullname: toNullIfEmpty(profile.nama),
     employee_nip: toNullIfEmpty(profile.nipBaru),
@@ -83,7 +85,7 @@ const buildEmployeeData = async (profile) => {
     employee_pmk_tahun: toInt(profile.mkTahun),
     employee_pmk_bulan: toInt(profile.mkBulan),
     employee_pmk_tmt: parseDate(profile.tmtCpns) || parseDate(profile.tmtPns),
-    employee_status_asn: 2,
+    employee_status_asn: jenisPNS,
     employee_bkn: toNullIfEmpty(profile.id),
   };
 
@@ -146,8 +148,18 @@ const persistProfile = async (profile) => {
       },
     });
 
-    await tx.sys_userrole.create({
-      data: {
+    await tx.sys_userrole.upsert({
+      where: {
+        userId_roleId: {
+          userId: sysUserRecord.user_id,
+          roleId: DEFAULT_ROLE_ID,
+        },
+      },
+      update: {
+        userId: sysUserRecord.user_id,
+        roleId: DEFAULT_ROLE_ID,
+      },
+      create: {
         userId: sysUserRecord.user_id,
         roleId: DEFAULT_ROLE_ID,
       },
