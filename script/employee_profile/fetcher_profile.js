@@ -18,6 +18,23 @@ const MASTER_NIP_LIST = masterEmployee.map((emp) => emp.employee_nip);
 const STAGING_DIR = path.join(__dirname, "staging_employee");
 const CONCURRENCY = 100;
 
+async function getExistingStagingNips() {
+  const stagedNips = new Set();
+
+  try {
+    const files = await fs.readdir(STAGING_DIR);
+    for (const fileName of files) {
+      if (path.extname(fileName) !== ".json") continue;
+      const nip = path.basename(fileName, ".json");
+      if (nip) stagedNips.add(nip);
+    }
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+
+  return stagedNips;
+}
+
 async function fetchDynamicToken() {
   logger.info(`[AUTH] Requesting new dynamic token from : ${TOKEN_URL}`);
   const body = new URLSearchParams();
@@ -100,8 +117,17 @@ async function main() {
   if (!tokenRef.current) return;
 
   logger.info(`--- Starting batch processing ---`);
-  logger.info(`Total NIPs to process: ${MASTER_NIP_LIST.length}`);
-  const queue = [...MASTER_NIP_LIST];
+  const existingStagingNips = await getExistingStagingNips();
+  const queue = MASTER_NIP_LIST.filter((nip) => !existingStagingNips.has(nip));
+
+  logger.info(`Total NIPs in master data: ${MASTER_NIP_LIST.length}`);
+  logger.info(`Skipped (already in staging_employee): ${MASTER_NIP_LIST.length - queue.length}`);
+  logger.info(`Total NIPs to fetch: ${queue.length}`);
+
+  if (queue.length === 0) {
+    logger.info("--- No new NIPs to fetch. Script finished. ---");
+    return;
+  }
 
   while (queue.length > 0) {
     const batchNIPs = queue.splice(0, CONCURRENCY);
