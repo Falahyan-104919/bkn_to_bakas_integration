@@ -49,9 +49,7 @@ async function withTokenRetry(makeRequest, tokenRef, context) {
     return await makeRequest(tokenRef.current);
   } catch (error) {
     if (error.response && error.response.status === 401) {
-      logger.warn(
-        `[AUTH] Token expired during ${context}. Refreshing token and retrying once.`,
-      );
+      logger.warn(`[AUTH] Token expired during ${context}. Refreshing token and retrying once.`);
       tokenRef.current = await fetchDynamicToken();
       return makeRequest(tokenRef.current);
     }
@@ -70,12 +68,8 @@ async function fetchEmployeeProfile(nip, tokenRef, staticToken) {
 
   try {
     logger.info(`[FETCH JSON] Fetching history for ${nip}...`);
-    const url = `${API_BASE_URL}/pns/data-utama/${nip}`;
-    const response = await withTokenRetry(
-      (token) => axios.get(url, { headers: makeAuthHeaders(token) }),
-      tokenRef,
-      `JSON fetch for ${nip}`,
-    );
+    const url = `${API_BASE_URL}/pns/data-utama/paruhwaktu/${nip}`;
+    const response = await withTokenRetry((token) => axios.get(url, { headers: makeAuthHeaders(token) }), tokenRef, `JSON fetch for ${nip}`);
 
     const data = response.data;
     await fs.writeFile(jsonFilePath, JSON.stringify(data, null, 2));
@@ -91,17 +85,9 @@ async function fetchEmployeeProfile(nip, tokenRef, staticToken) {
 }
 
 async function main() {
-  if (
-    !API_BASE_URL ||
-    !TOKEN_URL ||
-    !CLIENT_ID ||
-    !CLIENT_SECRET ||
-    !STATIC_AUTH_TOKEN
-  ) {
+  if (!API_BASE_URL || !TOKEN_URL || !CLIENT_ID || !CLIENT_SECRET || !STATIC_AUTH_TOKEN) {
     logger.error("--- ❌ FAILED! ---");
-    logger.error(
-      "Error: One or more required variables are missing from .env.",
-    );
+    logger.error("Error: One or more required variables are missing from .env.");
     logger.error("--- Script Aborted ---");
     return;
   }
@@ -119,9 +105,7 @@ async function main() {
 
   while (queue.length > 0) {
     const batchNIPs = queue.splice(0, CONCURRENCY);
-    const promises = batchNIPs.map((nip) =>
-      fetchEmployeeProfile(nip, tokenRef, staticToken),
-    );
+    const promises = batchNIPs.map((nip) => fetchEmployeeProfile(nip, tokenRef, staticToken));
     await Promise.all(promises);
 
     logger.info(`--- Batch complete. ${queue.length} NIPs remaining. ---`);
