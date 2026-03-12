@@ -1468,3 +1468,17 @@ model trx_shift {
   shift_update_by   DateTime? @db.DateTime(0)
   shift_status      Int?
 }
+
+model ms_kedudukan_hukum_pns {
+  kedudukan_hukum_pns_id          Int       @id @default(autoincrement())
+  kedudukan_hukum_pns_id_bkn      Int?
+  kedudukan_hukum_pns_kode        Int?
+  kedudukan_hukum_pns_nama        String?   @db.VarChar(255)
+  kedudukan_hukum_pns_status      Int?
+  kedudukan_hukum_pns_create_by   Int?
+  kedudukan_hukum_pns_create_date DateTime? @db.DateTime(0)
+  kedudukan_hukum_pns_update_by   Int?
+  kedudukan_hukum_pns_update_date DateTime? @db.DateTime(0)
+
+  @@unique([kedudukan_hukum_pns_id, kedudukan_hukum_pns_id_bkn, kedudukan_hukum_pns_kode], map: "KODE")
+}

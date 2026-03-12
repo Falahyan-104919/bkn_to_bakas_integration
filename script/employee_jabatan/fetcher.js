@@ -14,18 +14,13 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const STATIC_AUTH_TOKEN = process.env.STATIC_AUTH_TOKEN;
 
 // Config for JSON staging
-const masterEmployeeData = require("../employee_profile/ms_p3k.json");
+const masterEmployeeData = require("../../ms_employee.json");
 const MASTER_NIP_LIST = masterEmployeeData.map((emp) => emp["NIP BARU"]);
 const STAGING_DIR = path.join(__dirname, "staging_data");
-const parsedConcurrency = Number.parseInt(
-  process.env.CONCURRENCY_LIMIT ?? "50",
-  10,
-);
+const parsedConcurrency = Number.parseInt(process.env.CONCURRENCY_LIMIT ?? "50", 10);
 const CONCURRENCY_LIMIT = 100;
 const DEFAULT_CONCURRENCY =
-  Number.isFinite(parsedConcurrency) && parsedConcurrency > 0
-    ? Math.min(parsedConcurrency, CONCURRENCY_LIMIT)
-    : Math.min(50, CONCURRENCY_LIMIT);
+  Number.isFinite(parsedConcurrency) && parsedConcurrency > 0 ? Math.min(parsedConcurrency, CONCURRENCY_LIMIT) : Math.min(50, CONCURRENCY_LIMIT);
 const FORCE_REFRESH_JSON = false;
 const FORCE_REFRESH_FILES = false;
 const CLEAN_TEMP_BEFORE_DOWNLOAD = true;
@@ -59,9 +54,7 @@ function parseCliArgs(argv) {
       case "--extra-nips":
       case "--nips":
         if (i + 1 >= argv.length) {
-          throw new Error(
-            `${arg} requires a comma/space separated list of NIPs.`,
-          );
+          throw new Error(`${arg} requires a comma/space separated list of NIPs.`);
         }
         options.extraNipValues.push(argv[++i]);
         break;
@@ -120,9 +113,7 @@ async function resolveExtraNips(options) {
     try {
       contents = await fs.readFile(absolutePath, "utf-8");
     } catch (err) {
-      throw new Error(
-        `Unable to read NIP list file "${filePath}": ${err.message}`,
-      );
+      throw new Error(`Unable to read NIP list file "${filePath}": ${err.message}`);
     }
     for (const nip of parseNipListInput(contents.replace(/\r/g, "\n"))) {
       extraNips.add(nip);
@@ -186,9 +177,7 @@ async function withTokenRetry(makeRequest, tokenRef, context) {
     return await makeRequest(tokenRef.current);
   } catch (error) {
     if (error.response && error.response.status === 401) {
-      logger.warn(
-        `[AUTH] Token expired during ${context}. Refreshing token and retrying once.`,
-      );
+      logger.warn(`[AUTH] Token expired during ${context}. Refreshing token and retrying once.`);
       tokenRef.current = await fetchDynamicToken();
       return makeRequest(tokenRef.current);
     }
@@ -201,15 +190,7 @@ async function withTokenRetry(makeRequest, tokenRef, context) {
  * 1. Fetches and saves the NIP's JSON.
  * 2. Parses the JSON and downloads all associated files.
  */
-async function fetchAndSaveAllData(
-  nip,
-  tokenRef,
-  staticToken,
-  {
-    forceJsonRefresh = FORCE_REFRESH_JSON,
-    forceFileRefresh = FORCE_REFRESH_FILES,
-  } = {},
-) {
+async function fetchAndSaveAllData(nip, tokenRef, staticToken, { forceJsonRefresh = FORCE_REFRESH_JSON, forceFileRefresh = FORCE_REFRESH_FILES } = {}) {
   const jsonFilePath = path.join(STAGING_DIR, `${nip}.json`);
 
   // --- 1. JSON Handling ---
@@ -223,28 +204,20 @@ async function fetchAndSaveAllData(
         historyRecords = parsed.data;
         logger.info(`[JSON CACHE] Using cached ${nip}.json.`);
       } else {
-        logger.warn(
-          `[JSON CACHE] Cached ${nip}.json missing 'data' array. Fetching from API.`,
-        );
+        logger.warn(`[JSON CACHE] Cached ${nip}.json missing 'data' array. Fetching from API.`);
       }
     } catch (e) {
       if (e.code !== "ENOENT") {
-        logger.warn(
-          `[JSON CACHE] Unable to read cached ${nip}.json (${e.message}). Fetching from API.`,
-        );
+        logger.warn(`[JSON CACHE] Unable to read cached ${nip}.json (${e.message}). Fetching from API.`);
       }
     }
   } else {
     try {
       await fs.unlink(jsonFilePath);
-      logger.info(
-        `[REFRESH JSON] Removed existing ${nip}.json before refetch.`,
-      );
+      logger.info(`[REFRESH JSON] Removed existing ${nip}.json before refetch.`);
     } catch (e) {
       if (e.code !== "ENOENT") {
-        logger.warn(
-          `[REFRESH JSON] Failed removing cached ${nip}.json (${e.message}).`,
-        );
+        logger.warn(`[REFRESH JSON] Failed removing cached ${nip}.json (${e.message}).`);
       }
     }
   }
@@ -262,11 +235,7 @@ async function fetchAndSaveAllData(
     try {
       logger.info(`[FETCH JSON] Fetching history for ${nip}...`);
       const url = `${API_BASE_URL}/jabatan/pns/${nip}`;
-      const response = await withTokenRetry(
-        (token) => axios.get(url, { headers: makeAuthHeaders(token) }),
-        tokenRef,
-        `JSON fetch for ${nip}`,
-      );
+      const response = await withTokenRetry((token) => axios.get(url, { headers: makeAuthHeaders(token) }), tokenRef, `JSON fetch for ${nip}`);
 
       const data = response.data;
       await fs.writeFile(jsonFilePath, JSON.stringify(data, null, 2));
@@ -318,9 +287,7 @@ async function fetchAndSaveAllData(
       } else if (CLEAN_TEMP_BEFORE_DOWNLOAD) {
         try {
           await fs.unlink(localFilePath);
-          logger.info(
-            `[REFRESH FILE] Removed old ${safeFilename} before download.`,
-          );
+          logger.info(`[REFRESH FILE] Removed old ${safeFilename} before download.`);
         } catch (e) {
           // Ignore if file missing.
         }
@@ -328,9 +295,7 @@ async function fetchAndSaveAllData(
 
       // --- Download Logic ---
       try {
-        logger.info(
-          `[DOWNLOAD] Downloading: ${fileInfo.dok_nama} (NIP: ${nip})`,
-        );
+        logger.info(`[DOWNLOAD] Downloading: ${fileInfo.dok_nama} (NIP: ${nip})`);
         await withTokenRetry(
           async (token) => {
             const fileResponse = await axios.get(downloadUrl, {
@@ -351,9 +316,7 @@ async function fetchAndSaveAllData(
 
         logger.info(`[SAVE FILE] Saved file to: ${localFilePath}`);
       } catch (fileError) {
-        logger.error(
-          `[FAIL FILE] Failed to download ${fileInfo.dok_nama} (NIP: ${nip})`,
-        );
+        logger.error(`[FAIL FILE] Failed to download ${fileInfo.dok_nama} (NIP: ${nip})`);
         if (fileError.response) {
           logger.error(`Status: ${fileError.response.status}`);
         } else {
@@ -382,17 +345,9 @@ async function main() {
 
   logger.info("--- Starting Phase 1: Fetcher Script ---");
 
-  if (
-    !API_BASE_URL ||
-    !TOKEN_URL ||
-    !CLIENT_ID ||
-    !CLIENT_SECRET ||
-    !STATIC_AUTH_TOKEN
-  ) {
+  if (!API_BASE_URL || !TOKEN_URL || !CLIENT_ID || !CLIENT_SECRET || !STATIC_AUTH_TOKEN) {
     logger.error("--- ❌ FAILED! ---");
-    logger.error(
-      "Error: One or more required variables are missing from .env.",
-    );
+    logger.error("Error: One or more required variables are missing from .env.");
     logger.error("--- Script Aborted ---");
     return;
   }
@@ -417,9 +372,7 @@ async function main() {
   extraNipSet.forEach((nip) => nipSet.add(nip));
 
   if (!cliOptions.useMasterList && nipSet.size === 0) {
-    logger.error(
-      "[ARGS] --only-nips was specified but no additional NIPs were provided.",
-    );
+    logger.error("[ARGS] --only-nips was specified but no additional NIPs were provided.");
     process.exitCode = 1;
     return;
   }

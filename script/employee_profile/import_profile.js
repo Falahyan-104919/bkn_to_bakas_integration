@@ -47,18 +47,19 @@ const mapGender = (value) => {
 };
 
 const buildEmployeeData = async (profile) => {
-  const primaryPhone =
-    toNullIfEmpty(profile.noHp) || toNullIfEmpty(profile.noTelp);
-  const primaryEmail =
-    toNullIfEmpty(profile.email) || toNullIfEmpty(profile.emailGov);
+  const primaryPhone = toNullIfEmpty(profile.noHp) || toNullIfEmpty(profile.noTelp);
+  const primaryEmail = toNullIfEmpty(profile.email) || toNullIfEmpty(profile.emailGov);
   const domicilePostal = toInt(profile.kodePos);
   const { religion_id } = await prisma.ms_religion.findFirst({
     where: {
       religion_kode: parseInt(toNullIfEmpty(profile.agamaId)),
     },
   });
-
-  const jenisPNS = parseInt(profile.kedudukanPnsId) == 71 ? 2 : 1;
+  const { kedudukan_hukum_pns_id } = await prisma.ms_kedudukan_hukum_pns.findFirst({
+    where: {
+      kedudukan_hukum_pns_id_bkn: parseInt(profile.kedudukanPnsId),
+    },
+  });
 
   const data = {
     employee_fullname: toNullIfEmpty(profile.nama),
@@ -85,13 +86,11 @@ const buildEmployeeData = async (profile) => {
     employee_pmk_tahun: toInt(profile.mkTahun),
     employee_pmk_bulan: toInt(profile.mkBulan),
     employee_pmk_tmt: parseDate(profile.tmtCpns) || parseDate(profile.tmtPns),
-    employee_status_asn: jenisPNS,
+    employee_status_asn: kedudukan_hukum_pns_id,
     employee_bkn: toNullIfEmpty(profile.id),
   };
 
-  return Object.fromEntries(
-    Object.entries(data).filter(([, value]) => value !== undefined),
-  );
+  return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
 };
 
 const persistProfile = async (profile) => {
@@ -173,9 +172,7 @@ const importAllProfiles = async () => {
   const dirEntries = await fsp.readdir(STAGING_DATA_DIR, {
     withFileTypes: true,
   });
-  const jsonFiles = dirEntries.filter(
-    (entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".json"),
-  );
+  const jsonFiles = dirEntries.filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".json"));
 
   if (jsonFiles.length === 0) {
     logger.warn(`[IMPORT] No JSON payloads found in ${STAGING_DATA_DIR}`);
@@ -189,16 +186,12 @@ const importAllProfiles = async () => {
       const payload = JSON.parse(raw);
 
       if (!payload || payload.code !== 1 || !payload.data) {
-        logger.warn(
-          `[IMPORT] Skipping ${file.name}: invalid payload structure`,
-        );
+        logger.warn(`[IMPORT] Skipping ${file.name}: invalid payload structure`);
         continue;
       }
 
       await persistProfile(payload.data);
-      logger.info(
-        `[IMPORT] Imported ${payload.data.nipBaru} from ${file.name}`,
-      );
+      logger.info(`[IMPORT] Imported ${payload.data.nipBaru} from ${file.name}`);
     } catch (error) {
       logger.error(`[IMPORT] Failed to process ${file.name}: ${error.message}`);
     }
