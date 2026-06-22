@@ -15,7 +15,7 @@ const STATIC_AUTH_TOKEN = process.env.STATIC_AUTH_TOKEN;
 
 // Config for JSON staging
 const masterEmployeeData = require("../../ms_employee.json");
-const MASTER_NIP_LIST = masterEmployeeData.map((emp) => emp["NIP BARU"]);
+const MASTER_NIP_LIST = masterEmployeeData.map((emp) => emp["employee_nip"]);
 const STAGING_DIR = path.join(__dirname, "staging_data");
 const parsedConcurrency = Number.parseInt(process.env.CONCURRENCY_LIMIT ?? "50", 10);
 const CONCURRENCY_LIMIT = 100;
@@ -234,7 +234,7 @@ async function fetchAndSaveAllData(nip, tokenRef, staticToken, { forceJsonRefres
   if (needsJsonFetch) {
     try {
       logger.info(`[FETCH JSON] Fetching history for ${nip}...`);
-      const url = `${API_BASE_URL}/jabatan/pns/${nip}`;
+      const url = `${API_BASE_URL}/pns/rw-jabatan/${nip}`;
       const response = await withTokenRetry((token) => axios.get(url, { headers: makeAuthHeaders(token) }), tokenRef, `JSON fetch for ${nip}`);
 
       const data = response.data;
