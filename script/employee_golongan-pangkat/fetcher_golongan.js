@@ -13,10 +13,13 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const STATIC_AUTH_TOKEN = process.env.STATIC_AUTH_TOKEN;
 
-const masterP3K = require("../employee_profile/ms_p3k.json");
-const MASTER_NIP_LIST = masterP3K.map((emp) => emp["NIP BARU"]);
+const masterP3K = require("../../ms_employee.json");
+const MASTER_NIP_LIST = masterP3K.map((emp) => emp["employee_nip"]);
 const STAGING_DIR = path.join(__dirname, "staging_golongan");
 const CONCURRENCY = 100;
+
+const DOWNLOAD_PATH = "/download-dok";
+const DOWNLOAD_DIR = path.join(__dirname, "temp_downloads");
 
 async function fetchDynamicToken() {
   logger.info(`[AUTH] Requesting new dynamic token from : ${TOKEN_URL}`);
@@ -49,9 +52,7 @@ async function withTokenRetry(makeRequest, tokenRef, context) {
     return await makeRequest(tokenRef.current);
   } catch (error) {
     if (error.response && error.response.status === 401) {
-      logger.warn(
-        `[AUTH] Token expired during ${context}. Refreshing token and retrying once.`,
-      );
+      logger.warn(`[AUTH] Token expired during ${context}. Refreshing token and retrying once.`);
       tokenRef.current = await fetchDynamicToken();
       return makeRequest(tokenRef.current);
     }
@@ -71,13 +72,63 @@ async function fetchEmployeeProfile(nip, tokenRef, staticToken) {
   try {
     logger.info(`[FETCH JSON] Fetching history golongan for ${nip}...`);
     const url = `${API_BASE_URL}/pns/rw-golongan/${nip}`;
-    const response = await withTokenRetry(
-      (token) => axios.get(url, { headers: makeAuthHeaders(token) }),
-      tokenRef,
-      `JSON fetch for ${nip}`,
-    );
+    const response = await withTokenRetry((token) => axios.get(url, { headers: makeAuthHeaders(token) }), tokenRef, `JSON fetch for ${nip}`);
 
     const data = response.data;
+    let records = [];
+    if (data && Array.isArray(data.data)) {
+      records = data.data;
+    } else if (Array.isArray(data)) {
+      records = data;
+    }
+
+    if (records && records.length > 0) {
+      for (const record of records) {
+        if (!record.path || Object.keys(record.path).length === 0) continue;
+        for (const docKey in record.path) {
+          const fileInfo = record.path[docKey];
+          const filePath = fileInfo.dok_uri;
+          if (!filePath) continue;
+
+          const encodedFilePath = encodeURIComponent(filePath);
+          const downloadUrl = `${API_BASE_URL}${DOWNLOAD_PATH}?filePath=${encodedFilePath}`;
+          const safeFilename = `${record.id}_${docKey}_${path.basename(filePath)}`;
+          const localFilePath = path.join(DOWNLOAD_DIR, safeFilename);
+
+          try {
+            await fs.access(localFilePath);
+            logger.info(`[SKIP FILE] File ${safeFilename} already exists.`);
+            continue;
+          } catch (e) {
+            // File doesn't exist, proceed to download
+          }
+
+          try {
+            logger.info(`[DOWNLOAD] Downloading: ${fileInfo.dok_nama || docKey} (NIP: ${nip})`);
+            await withTokenRetry(
+              async (token) => {
+                const fileResponse = await axios.get(downloadUrl, {
+                  headers: { ...makeAuthHeaders(token), accept: "application/pdf" },
+                  responseType: "stream",
+                });
+                const writer = fss.createWriteStream(localFilePath);
+                fileResponse.data.pipe(writer);
+                await new Promise((resolve, reject) => {
+                  writer.on("finish", resolve);
+                  writer.on("error", reject);
+                });
+              },
+              tokenRef,
+              `file download for ${nip} (${safeFilename})`,
+            );
+            logger.info(`[SAVE FILE] Saved file to: ${localFilePath}`);
+          } catch (err) {
+            logger.error(`[FAIL FILE] Failed to download ${fileInfo.dok_nama || docKey} (NIP: ${nip}): ${err.message}`);
+          }
+        }
+      }
+    }
+
     await fs.writeFile(jsonFilePath, JSON.stringify(data, null, 2));
     logger.info(`[SAVE JSON] Successfully saved ${nip}.json`);
   } catch (error) {
@@ -91,22 +142,15 @@ async function fetchEmployeeProfile(nip, tokenRef, staticToken) {
 }
 
 async function main() {
-  if (
-    !API_BASE_URL ||
-    !TOKEN_URL ||
-    !CLIENT_ID ||
-    !CLIENT_SECRET ||
-    !STATIC_AUTH_TOKEN
-  ) {
+  if (!API_BASE_URL || !TOKEN_URL || !CLIENT_ID || !CLIENT_SECRET || !STATIC_AUTH_TOKEN) {
     logger.error("--- ❌ FAILED! ---");
-    logger.error(
-      "Error: One or more required variables are missing from .env.",
-    );
+    logger.error("Error: One or more required variables are missing from .env.");
     logger.error("--- Script Aborted ---");
     return;
   }
 
   await fs.mkdir(STAGING_DIR, { recursive: true });
+  await fs.mkdir(DOWNLOAD_DIR, { recursive: true });
 
   const tokenRef = { current: await fetchDynamicToken() };
   const staticToken = STATIC_AUTH_TOKEN;
@@ -119,9 +163,7 @@ async function main() {
 
   while (queue.length > 0) {
     const batchNIPs = queue.splice(0, CONCURRENCY);
-    const promises = batchNIPs.map((nip) =>
-      fetchEmployeeProfile(nip, tokenRef, staticToken),
-    );
+    const promises = batchNIPs.map((nip) => fetchEmployeeProfile(nip, tokenRef, staticToken));
     await Promise.all(promises);
 
     logger.info(`--- Batch complete. ${queue.length} NIPs remaining. ---`);

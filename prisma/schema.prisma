@@ -1452,6 +1452,9 @@ model trx_pangkat {
   pangkat_ket                  String?   @db.VarChar(255)
   pangkat_masa_kerja_tahun     Int?
   pangkat_masa_kerja_bulan     Int?
+  pangkat_kredit_utama         Decimal?  @db.Decimal(10, 3)
+  pangkat_kredit_tambahan      Decimal?  @db.Decimal(10, 3)
+  pangkat_bkn_id               String?   @db.VarChar(255)
 
   @@unique([pangkat_employee_id, pangkat_tanggal_tmt_golongan], map: "NAMA_SK")
   @@index([pangkat_employee_id, pangkat_golongan_id, pangkat_tanggal_tmt_golongan, pangkat_nomor_sk_bkn, pangkat_tanggal_sk_bkn, pangkat_jenis_kenaikan, pangkat_jenis_sk, pangkat_file_id, pangkat_status, pangkat_masa_kerja_tahun, pangkat_masa_kerja_bulan], map: "IDS")
