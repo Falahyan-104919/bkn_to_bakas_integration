@@ -69,75 +69,83 @@ async function fetchEmployeeProfile(nip, tokenRef, staticToken) {
     Auth: `Bearer ${staticToken}`,
   });
 
+  let data;
   try {
-    logger.info(`[FETCH JSON] Fetching history golongan for ${nip}...`);
-    const url = `${API_BASE_URL}/pns/rw-golongan/${nip}`;
-    const response = await withTokenRetry((token) => axios.get(url, { headers: makeAuthHeaders(token) }), tokenRef, `JSON fetch for ${nip}`);
+    await fs.access(jsonFilePath);
+    logger.info(`[SKIP JSON] File ${nip}.json already exists. Reading from local...`);
+    const fileContent = await fs.readFile(jsonFilePath, "utf8");
+    data = JSON.parse(fileContent);
+  } catch (err) {
+    try {
+      logger.info(`[FETCH JSON] Fetching history golongan for ${nip}...`);
+      const url = `${API_BASE_URL}/pns/rw-golongan/${nip}`;
+      const response = await withTokenRetry((token) => axios.get(url, { headers: makeAuthHeaders(token) }), tokenRef, `JSON fetch for ${nip}`);
 
-    const data = response.data;
-    let records = [];
-    if (data && Array.isArray(data.data)) {
-      records = data.data;
-    } else if (Array.isArray(data)) {
-      records = data;
+      data = response.data;
+      await fs.writeFile(jsonFilePath, JSON.stringify(data, null, 2));
+      logger.info(`[SAVE JSON] Successfully saved ${nip}.json`);
+    } catch (error) {
+      let errorMsg = error.message;
+      if (error.response) {
+        errorMsg = `STATUS ${error.response.status} : ${JSON.stringify(error.response.data)}`;
+      }
+      logger.error(`[FAIL JSON] Failed to process ${nip}: ${errorMsg}`);
+      return;
     }
+  }
 
-    if (records && records.length > 0) {
-      for (const record of records) {
-        if (!record.path || Object.keys(record.path).length === 0) continue;
-        for (const docKey in record.path) {
-          const fileInfo = record.path[docKey];
-          const filePath = fileInfo.dok_uri;
-          if (!filePath) continue;
+  let records = [];
+  if (data && Array.isArray(data.data)) {
+    records = data.data;
+  } else if (Array.isArray(data)) {
+    records = data;
+  }
 
-          const encodedFilePath = encodeURIComponent(filePath);
-          const downloadUrl = `${API_BASE_URL}${DOWNLOAD_PATH}?filePath=${encodedFilePath}`;
-          const safeFilename = `${record.id}_${docKey}_${path.basename(filePath)}`;
-          const localFilePath = path.join(DOWNLOAD_DIR, safeFilename);
+  if (records && records.length > 0) {
+    for (const record of records) {
+      if (!record.path || Object.keys(record.path).length === 0) continue;
+      for (const docKey in record.path) {
+        const fileInfo = record.path[docKey];
+        const filePath = fileInfo.dok_uri;
+        if (!filePath) continue;
 
-          try {
-            await fs.access(localFilePath);
-            logger.info(`[SKIP FILE] File ${safeFilename} already exists.`);
-            continue;
-          } catch (e) {
-            // File doesn't exist, proceed to download
-          }
+        const encodedFilePath = encodeURIComponent(filePath);
+        const downloadUrl = `${API_BASE_URL}${DOWNLOAD_PATH}?filePath=${encodedFilePath}`;
+        const safeFilename = `${record.id}_${docKey}_${path.basename(filePath)}`;
+        const localFilePath = path.join(DOWNLOAD_DIR, safeFilename);
 
-          try {
-            logger.info(`[DOWNLOAD] Downloading: ${fileInfo.dok_nama || docKey} (NIP: ${nip})`);
-            await withTokenRetry(
-              async (token) => {
-                const fileResponse = await axios.get(downloadUrl, {
-                  headers: { ...makeAuthHeaders(token), accept: "application/pdf" },
-                  responseType: "stream",
-                });
-                const writer = fss.createWriteStream(localFilePath);
-                fileResponse.data.pipe(writer);
-                await new Promise((resolve, reject) => {
-                  writer.on("finish", resolve);
-                  writer.on("error", reject);
-                });
-              },
-              tokenRef,
-              `file download for ${nip} (${safeFilename})`,
-            );
-            logger.info(`[SAVE FILE] Saved file to: ${localFilePath}`);
-          } catch (err) {
-            logger.error(`[FAIL FILE] Failed to download ${fileInfo.dok_nama || docKey} (NIP: ${nip}): ${err.message}`);
-          }
+        try {
+          await fs.access(localFilePath);
+          logger.info(`[SKIP FILE] File ${safeFilename} already exists.`);
+          continue;
+        } catch (e) {
+          // File doesn't exist, proceed to download
+        }
+
+        try {
+          logger.info(`[DOWNLOAD] Downloading: ${fileInfo.dok_nama || docKey} (NIP: ${nip})`);
+          await withTokenRetry(
+            async (token) => {
+              const fileResponse = await axios.get(downloadUrl, {
+                headers: { ...makeAuthHeaders(token), accept: "application/pdf" },
+                responseType: "stream",
+              });
+              const writer = fss.createWriteStream(localFilePath);
+              fileResponse.data.pipe(writer);
+              await new Promise((resolve, reject) => {
+                writer.on("finish", resolve);
+                writer.on("error", reject);
+              });
+            },
+            tokenRef,
+            `file download for ${nip} (${safeFilename})`,
+          );
+          logger.info(`[SAVE FILE] Saved file to: ${localFilePath}`);
+        } catch (err) {
+          logger.error(`[FAIL FILE] Failed to download ${fileInfo.dok_nama || docKey} (NIP: ${nip}): ${err.message}`);
         }
       }
     }
-
-    await fs.writeFile(jsonFilePath, JSON.stringify(data, null, 2));
-    logger.info(`[SAVE JSON] Successfully saved ${nip}.json`);
-  } catch (error) {
-    let errorMsg = error.message;
-    if (error.response) {
-      errorMsg = `STATUS ${error.response.status} : ${JSON.stringify(error.response.data)}`;
-    }
-    logger.error(`[FAIL JSON] Failed to process ${nip}: ${errorMsg}`);
-    return;
   }
 }
 
