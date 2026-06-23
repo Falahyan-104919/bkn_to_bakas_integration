@@ -4,9 +4,10 @@ build/
 staging_data/
 temp_downloads/
 record_data_to_review/
-staging_data
+staging_data/
 staging_employee/
 staging_golongan/
+staging_angka_kredit/
 *.log
 *.txt
 .vscode/

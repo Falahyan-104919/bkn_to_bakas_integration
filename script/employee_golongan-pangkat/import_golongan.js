@@ -2,21 +2,23 @@ const fsp = require("fs").promises;
 const fs = require("fs");
 const path = require("path");
 
-const FINAL_FILE_DESTINATION_BASE = "/home/aptika/sinetron-back/assets/upload";
+const FINAL_FILE_DESTINATION_BASE = "/home/linux/sinetron-back/assets/upload";
 
 const { PrismaClient } = require("@prisma/client");
 const logger = require("../logger");
 
 const prisma = new PrismaClient();
 
-const STAGING_DATA_DIR = path.resolve(__dirname, "staging_employee_golongan");
+const STAGING_DATA_DIR = path.resolve(__dirname, "staging_golongan");
 const STAGING_FILES_DIR = path.join(__dirname, "temp_downloads");
 const SUPERADMIN_ID = 1;
 const BKN_DOC_ID_TO_FILE_KEY = {
   858: "SK_PANGKAT",
+  50: "SK_PETIKAN_PPK",
 };
 const LOCAL_FILE_KEY_MAPPING = {
   SK_PANGKAT: { fileType: 12, field: "pangkat_file_id" },
+  SK_PETIKAN_PPK: { fileType: 1, field: "pangkat_file_id" },
 };
 
 const toNullIfEmpty = (value) => {
@@ -82,7 +84,7 @@ const persistProfile = async (profile) => {
       if (!fileKeyName) continue;
 
       if (!fileInfo || !fileInfo.dok_uri) continue;
-      
+
       const basename = path.basename(fileInfo.dok_uri);
       const safeDownloadedFilename = `${profile.id}_${docKey}_${basename}`;
       const sourcePath = path.join(STAGING_FILES_DIR, safeDownloadedFilename);
@@ -92,9 +94,8 @@ const persistProfile = async (profile) => {
         continue;
       }
 
-      const dateString = parseDate(profile.skTanggal) || new Date();
-      const datePart = `${String(dateString.getDate()).padStart(2, "0")}${String(dateString.getMonth() + 1).padStart(2, "0")}${String(dateString.getFullYear()).slice(2)}`;
-      const newFilename = `${nip}_PANGKAT_${datePart}_${fileKeyName}.pdf`;
+      const golonganString = profile.golongan || "";
+      const newFilename = `${nip}_${fileKeyName}_${golonganString.replaceAll("/", "")}.pdf`;
       const finalDirPath = path.join(FINAL_FILE_DESTINATION_BASE, nip);
       const finalFilePath = path.join(finalDirPath, newFilename);
 
@@ -127,19 +128,19 @@ const persistProfile = async (profile) => {
       },
     });
     if (!ms_employee) {
-        logger.warn(`[SKIP] NIP ${profile.nipBaru} not found in ms_employee`);
-        return;
+      logger.warn(`[SKIP] NIP ${profile.nipBaru} not found in ms_employee`);
+      return;
     }
     const employee_id = ms_employee.employee_id;
 
     const ms_golongan = await tx.ms_golongan.findUnique({
       where: {
-        golongan_kode: profile.golonganId,
+        golongan_kode: toInt(profile.golonganId),
       },
     });
     if (!ms_golongan) {
-        logger.warn(`[SKIP] Golongan ${profile.golonganId} not found in ms_golongan`);
-        return;
+      logger.warn(`[SKIP] Golongan ${profile.golonganId} not found in ms_golongan`);
+      return;
     }
     const golongan_id = ms_golongan.golongan_id;
 

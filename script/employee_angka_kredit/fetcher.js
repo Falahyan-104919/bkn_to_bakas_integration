@@ -6,7 +6,6 @@ const axios = require("axios");
 const { URLSearchParams } = require("url");
 const logger = require("../logger");
 
-// --- Configuration ---
 const API_BASE_URL = process.env.API_BASE_URL;
 const TOKEN_URL = process.env.TOKEN_URL;
 const CLIENT_ID = process.env.CLIENT_ID;
@@ -15,7 +14,7 @@ const STATIC_AUTH_TOKEN = process.env.STATIC_AUTH_TOKEN;
 
 const masterP3K = require("../../ms_employee.json");
 const MASTER_NIP_LIST = masterP3K.map((emp) => emp["employee_nip"]);
-const STAGING_DIR = path.join(__dirname, "staging_golongan");
+const STAGING_DIR = path.join(__dirname, "staging_data");
 const CONCURRENCY = 100;
 
 const DOWNLOAD_PATH = "/download-dok";
@@ -60,7 +59,7 @@ async function withTokenRetry(makeRequest, tokenRef, context) {
   }
 }
 
-async function fetchEmployeeProfile(nip, tokenRef, staticToken) {
+async function fetchRiwayatAngkaKredit(nip, tokenRef, staticToken) {
   const jsonFilePath = path.join(STAGING_DIR, `${nip}.json`);
 
   const makeAuthHeaders = (token) => ({
@@ -77,8 +76,8 @@ async function fetchEmployeeProfile(nip, tokenRef, staticToken) {
     data = JSON.parse(fileContent);
   } catch (err) {
     try {
-      logger.info(`[FETCH JSON] Fetching history golongan for ${nip}...`);
-      const url = `${API_BASE_URL}/pns/rw-golongan/${nip}`;
+      logger.info(`[FETCH JSON] Fetching history angka kredit for ${nip}...`);
+      const url = `${API_BASE_URL}/pns/rw-angkakredit/${nip}`;
       const response = await withTokenRetry((token) => axios.get(url, { headers: makeAuthHeaders(token) }), tokenRef, `JSON fetch for ${nip}`);
 
       data = response.data;
@@ -171,7 +170,7 @@ async function main() {
 
   while (queue.length > 0) {
     const batchNIPs = queue.splice(0, CONCURRENCY);
-    const promises = batchNIPs.map((nip) => fetchEmployeeProfile(nip, tokenRef, staticToken));
+    const promises = batchNIPs.map((nip) => fetchRiwayatAngkaKredit(nip, tokenRef, staticToken));
     await Promise.all(promises);
 
     logger.info(`--- Batch complete. ${queue.length} NIPs remaining. ---`);
