@@ -293,7 +293,6 @@ model ms_golongan {
   golongan_create_by   String?   @db.VarChar(255)
   golongan_create_date DateTime? @db.DateTime(0)
   golongan_status      Int?
-  golongan_p3k         String?   @db.VarChar(255)
 
   @@unique([golongan_kode], map: "KODE")
   @@index([golongan_nama, golongan_pangkat], map: "NAME")
