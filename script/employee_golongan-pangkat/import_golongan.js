@@ -135,7 +135,7 @@ const persistProfile = async (profile) => {
 
     const ms_golongan = await tx.ms_golongan.findUnique({
       where: {
-        golongan_kode: toInt(profile.golonganId),
+        golongan_kode: profile.golonganId,
       },
     });
     if (!ms_golongan) {
