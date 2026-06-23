@@ -290,8 +290,10 @@ model ms_golongan {
   golongan_kode        String?   @db.VarChar(255)
   golongan_nama        String?   @db.VarChar(255)
   golongan_pangkat     String?   @db.VarChar(255)
-  golongan_create_by   String?   @db.VarChar(255)
+  golongan_create_by   Int?
   golongan_create_date DateTime? @db.DateTime(0)
+  golongan_update_by   Int?
+  golongan_update_date DateTime? @db.DateTime(0)
   golongan_status      Int?
 
   @@unique([golongan_kode], map: "KODE")
