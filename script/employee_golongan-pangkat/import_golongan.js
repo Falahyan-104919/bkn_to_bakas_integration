@@ -180,7 +180,7 @@ const persistProfile = async (profile) => {
       update: {
         pangkat_employee_id: employee_id,
         pangkat_golongan_id: golongan_id,
-        pangkat_jenis_kenaikan_id: jenis_kp_id,
+        pangkat_jenis_kenaikan: jenis_kp_id,
         ...baseData,
         ...fileIdsToLink,
         pangkat_create_by: SUPERADMIN_ID,
@@ -189,7 +189,7 @@ const persistProfile = async (profile) => {
       create: {
         pangkat_employee_id: employee_id,
         pangkat_golongan_id: golongan_id,
-        pangkat_jenis_kenaikan_id: jenis_kp_id,
+        pangkat_jenis_kenaikan: jenis_kp_id,
         ...baseData,
         ...fileIdsToLink,
         pangkat_create_by: SUPERADMIN_ID,
