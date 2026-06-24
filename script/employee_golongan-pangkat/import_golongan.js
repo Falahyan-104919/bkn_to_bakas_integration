@@ -44,15 +44,23 @@ const parseDate = (value) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+const parseTanggalSKDate = (value) => {
+  const cleaned = toNullIfEmpty(value);
+  if (!cleaned) return null;
+  const [day, month, year] = cleaned.split("-");
+  const parsed = new Date(`${year}-${month}-${day}`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 const buildEmployeeData = async (profile) => {
   const data = {
     pangkat_tanggal_tmt_golongan: parseDate(profile.tmtGolongan),
     pangkat_nomor_sk: profile.skNomor,
-    pangkat_tanggal_sk: parseDate(profile.skTanggal),
+    pangkat_tanggal_sk: parseTanggalSKDate(profile.skTanggal),
     pangkat_status: 1,
     pangkat_jenis_sk: 3,
     pangkat_nomor_sk_bkn: profile.noPertekBkn,
-    pangkat_tanggal_sk_bkn: parseDate(profile.tglPertekBkn),
+    pangkat_tanggal_sk_bkn: parseTanggalSKDate(profile.tglPertekBkn),
     pangkat_masa_kerja_tahun: toInt(profile.masaKerjaGolonganTahun),
     pangkat_masa_kerja_bulan: toInt(profile.masaKerjaGolonganBulan),
     pangkat_kredit_utama: parseFloat(profile.jumlahKreditUtama),
