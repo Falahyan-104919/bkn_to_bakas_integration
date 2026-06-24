@@ -203,7 +203,7 @@ async function processRecordsForNip(nip, records) {
 
   for (const record of records) {
     const fileMoveOps = [];
-
+    let txSuccess = false;
     try {
       if (
         isBlank(record.unorId) &&
@@ -337,7 +337,6 @@ async function processRecordsForNip(nip, records) {
         await fsp.copyFile(op.sourcePath, op.finalFilePath);
       }
 
-      let txSuccess = false;
       await prisma.$transaction(async (tx) => {
         const uniqueWhere = {
           trx_jabatan_employee_id_trx_jabatan_tmt: {
