@@ -39,13 +39,8 @@ const toInt = (value) => {
 
 const parseDate = (value) => {
   const cleaned = toNullIfEmpty(value);
-  if (!cleaned || cleaned === "01-01-0001") return null;
-  const formatted = cleaned.split("T")[0];
-  const [day, month, year] = formatted.split("-");
-  if (!day || !month || !year) return null;
-  const isoDate = `${year.padStart(4, "0")}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-  const parsed = new Date(isoDate);
-  console.log("parsed", parsed);
+  if (!cleaned || cleaned === "01-01-0001" || cleaned === "0001-01-01T00:00:00Z") return null;
+  const parsed = new Date(cleaned);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
@@ -138,11 +133,18 @@ const persistProfile = async (profile) => {
         golongan_kode: profile.golonganId,
       },
     });
-    if (!ms_golongan) {
-      logger.warn(`[SKIP] Golongan ${profile.golonganId} not found in ms_golongan`);
+
+    const ms_jenisKp = await tx.ms_jenis_kenaikan.findUnique({
+      where: {
+        jenis_kp_kode: profile.jenisKPId,
+      },
+    });
+    if (!ms_golongan || !ms_jenisKp) {
+      logger.warn(`[SKIP] Golongan ${profile.golonganId} not found in ms_golongan or ms_jenis_kenaikan`);
       return;
     }
     const golongan_id = ms_golongan.golongan_id;
+    const jenis_kp_id = ms_jenisKp.jenis_kp_id;
 
     const fileIdsToLink = {};
     for (const [, fileData] of fileCreateDataMap.entries()) {
@@ -165,6 +167,7 @@ const persistProfile = async (profile) => {
       update: {
         pangkat_employee_id: employee_id,
         pangkat_golongan_id: golongan_id,
+        pangkat_jenis_kenaikan_id: jenis_kp_id,
         ...baseData,
         ...fileIdsToLink,
         pangkat_create_by: SUPERADMIN_ID,
@@ -173,6 +176,7 @@ const persistProfile = async (profile) => {
       create: {
         pangkat_employee_id: employee_id,
         pangkat_golongan_id: golongan_id,
+        pangkat_jenis_kenaikan_id: jenis_kp_id,
         ...baseData,
         ...fileIdsToLink,
         pangkat_create_by: SUPERADMIN_ID,
