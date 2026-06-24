@@ -3,7 +3,7 @@ const fsp = require("fs").promises;
 const fs = require("fs");
 const path = require("path");
 const { PrismaClient } = require("@prisma/client");
-const logger = require("./logger");
+const logger = require("../logger");
 
 const prisma = new PrismaClient();
 
