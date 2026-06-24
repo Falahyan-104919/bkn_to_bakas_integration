@@ -21,8 +21,8 @@ const BKN_DOC_ID_TO_FILE_KEY = {
 };
 
 const LOCAL_FILE_KEY_MAPPING = {
-  skJabatan: { fileType: 11, field: "trx_jabatan_file_id" },
-  spPelantikan: { fileType: 40, field: "trx_jabatan_file_spp" },
+  SK_JABATAN: { fileType: 11, field: "trx_jabatan_file_id" },
+  SK_PELANTIKAN: { fileType: 40, field: "trx_jabatan_file_spp" },
   baJabatan: { fileType: 41, field: "trx_jabatan_file_ba" },
 };
 
@@ -85,19 +85,28 @@ const findOrganizationAndJabatan = async (record) => {
 
   const instansiID = await prisma.ms_instansi_pusat.findFirst({
     where: {
-      AND: [{ ms_instansi_pusat_instansi_id: instansiKerjaId }, { ms_instansi_pusat_satker_id: satuanKerjaId }],
+      AND: [
+        { ms_instansi_pusat_instansi_id: { startsWith: instansiKerjaId } },
+        { ms_instansi_pusat_satker_id: { startsWith: satuanKerjaId } }
+      ],
     },
   });
 
   const provinsiID = await prisma.ms_provinsi.findFirst({
     where: {
-      AND: [{ provinsi_instansi_id: instansiKerjaId }, { provinsi_satker_id: satuanKerjaId }],
+      AND: [
+        { provinsi_instansi_id: { startsWith: instansiKerjaId } },
+        { provinsi_satker_id: { startsWith: satuanKerjaId } }
+      ],
     },
   });
 
   const kabKotID = await prisma.ms_kota.findFirst({
     where: {
-      AND: [{ kota_instansi_id: instansiKerjaId }, { kota_satker_id: satuanKerjaId }],
+      AND: [
+        { kota_instansi_id: { startsWith: instansiKerjaId } },
+        { kota_satker_id: { startsWith: satuanKerjaId } }
+      ],
     },
   });
 
