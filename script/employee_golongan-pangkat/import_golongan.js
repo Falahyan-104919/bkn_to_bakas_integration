@@ -81,13 +81,6 @@ const persistProfile = async (profile) => {
       if (!fileInfo || !fileInfo.dok_uri) continue;
 
       const basename = path.basename(fileInfo.dok_uri);
-      const safeDownloadedFilename = `${profile.id}_${docKey}_${basename}`;
-      const sourcePath = path.join(STAGING_FILES_DIR, safeDownloadedFilename);
-
-      if (!fs.existsSync(sourcePath)) {
-        logger.warn(`[FILE] File not found in temp_downloads: ${safeDownloadedFilename}`);
-        continue;
-      }
 
       const golonganString = profile.golongan || "";
       const newFilename = `${nip}_${fileKeyName}_${golonganString.replaceAll("/", "")}.pdf`;
@@ -97,7 +90,25 @@ const persistProfile = async (profile) => {
       const fileMapping = LOCAL_FILE_KEY_MAPPING[fileKeyName];
       if (!fileMapping) continue;
 
-      const stats = await fsp.stat(sourcePath);
+      let fileSize = 0;
+      let shouldMoveFile = false;
+      const safeDownloadedFilename = `${profile.id}_${docKey}_${basename}`;
+      const sourcePath = path.join(STAGING_FILES_DIR, safeDownloadedFilename);
+
+      if (fs.existsSync(finalFilePath)) {
+        const stats = await fsp.stat(finalFilePath);
+        fileSize = stats.size;
+        logger.info(`[FILE] File already exists in final destination: ${finalFilePath}`);
+      } else {
+        if (!fs.existsSync(sourcePath)) {
+          logger.warn(`[FILE] File not found in temp_downloads and not in final destination: ${safeDownloadedFilename}`);
+          continue;
+        }
+        const stats = await fsp.stat(sourcePath);
+        fileSize = stats.size;
+        shouldMoveFile = true;
+      }
+
       fileCreateDataMap.set(fileKeyName, {
         fileMapping: fileMapping,
         createData: {
@@ -107,12 +118,14 @@ const persistProfile = async (profile) => {
           file_status: 1,
           file_create_by: SUPERADMIN_ID,
           file_create_date: now,
-          file_size: stats.size,
+          file_size: fileSize,
           file_ext: "pdf",
         },
       });
 
-      fileMoveOps.push({ sourcePath, finalFilePath, finalDirPath });
+      if (shouldMoveFile) {
+        fileMoveOps.push({ sourcePath, finalFilePath, finalDirPath });
+      }
     }
   }
 
@@ -128,13 +141,13 @@ const persistProfile = async (profile) => {
     }
     const employee_id = ms_employee.employee_id;
 
-    const ms_golongan = await tx.ms_golongan.findUnique({
+    const ms_golongan = await tx.ms_golongan.findFirst({
       where: {
         golongan_kode: profile.golonganId,
       },
     });
 
-    const ms_jenisKp = await tx.ms_jenis_kenaikan.findUnique({
+    const ms_jenisKp = await tx.ms_jenis_kenaikan.findFirst({
       where: {
         jenis_kp_kode: toInt(profile.jenisKPId),
       },
