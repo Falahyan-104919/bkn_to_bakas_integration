@@ -50,7 +50,7 @@ const buildEmployeeData = async (profile) => {
     pangkat_nomor_sk: profile.skNomor,
     pangkat_tanggal_sk: parseDate(profile.skTanggal),
     pangkat_status: 1,
-    pangkat_jenis_sk: 4,
+    pangkat_jenis_sk: 3,
     pangkat_nomor_sk_bkn: profile.noPertekBkn,
     pangkat_tanggal_sk_bkn: parseDate(profile.tglPertekBkn),
     pangkat_masa_kerja_tahun: toInt(profile.masaKerjaGolonganTahun),
