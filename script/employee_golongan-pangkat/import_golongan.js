@@ -122,7 +122,7 @@ const persistProfile = async (profile) => {
         createData: {
           file_name: newFilename,
           file_type: fileMapping.fileType,
-          file_path: finalFilePath,
+          file_path: finalFilePath.substring(26),
           file_status: 1,
           file_create_by: SUPERADMIN_ID,
           file_create_date: now,
