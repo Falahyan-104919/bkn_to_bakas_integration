@@ -233,22 +233,6 @@ async function processRecordsForNip(nip, records) {
         throw new Error(`NIP ${record.nipBaru} not found in local ms_employee`);
       }
 
-      const jabatanKode = findJabatanKode(record);
-      const jabatan = jabatanKode
-        ? await prisma.ms_jabatan.findFirst({
-            where: {
-              jabatan_kode: jabatanKode,
-              jabatan_status: { notIn: [0] },
-            },
-          })
-        : null;
-
-      const organization = await prisma.ms_organization.findFirst({
-        where: {
-          organization_bkn_id: record.unorId,
-          organization_status: { notIn: [0] },
-        },
-      });
       const organizationAndJabatan = await findOrganizationAndJabatan(record);
 
       const parsedTmtJabatan = parseDate(record.tmtJabatan);
@@ -446,7 +430,7 @@ async function runSingleTest() {
   logger.info("--- Starting Single Record Test ---");
 
   // EDIT THIS TO TEST A SPECIFIC SCENARIO
-  const testNip = "198501012010011001";
+  const testNip = "197310111999031004";
 
   const testRecord = [
     {
