@@ -394,7 +394,7 @@ model ms_jenis_file {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model ms_jenis_hukuman {
   jenis_hukuman_id          Int       @id @unique(map: "ID") @default(autoincrement())
-  jenis_hukuman_kode        String?   @db.VarChar(255)
+  jenis_hukuman_kode        String?   @unique @db.VarChar(255)
   jenis_hukuman_nama        String?   @db.VarChar(255)
   jenis_hukuman_create_by   Int?
   jenis_hukuman_create_date DateTime? @db.DateTime(0)
