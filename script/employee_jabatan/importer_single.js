@@ -334,26 +334,19 @@ async function processRecordsForNip(nip, records) {
           where: uniqueWhere,
         });
 
-        let jabatanRecord;
-
-        if (existingRecord && existingRecord.trx_jabatan_status !== STATUS_SYNC_BKN) {
-          logger.info(`[SKIP UPDATE] Record for NIP ${nip} / TMT ${record.tmtJabatan} was manually edited locally. Skipping overwrite.`);
-          jabatanRecord = existingRecord;
-        } else {
-          jabatanRecord = await tx.trx_jabatan.upsert({
-            where: uniqueWhere,
-            update: {
-              ...dataPayload,
-            },
-            create: {
-              ...dataPayload,
-              trx_jabatan_employee_id: employee.employee_id,
-              trx_jabatan_tmt: parsedTmtJabatan,
-              trx_jabatan_create_date: new Date(),
-              trx_jabatan_create_by: 0,
-            },
-          });
-        }
+        let jabatanRecord = await tx.trx_jabatan.upsert({
+          where: uniqueWhere,
+          update: {
+            ...dataPayload,
+          },
+          create: {
+            ...dataPayload,
+            trx_jabatan_employee_id: employee.employee_id,
+            trx_jabatan_tmt: parsedTmtJabatan,
+            trx_jabatan_create_date: new Date(),
+            trx_jabatan_create_by: 0,
+          },
+        });
 
         if (fileCreateDataMap.size === 0) {
           return;
