@@ -136,7 +136,7 @@ const persistProfile = async (profile) => {
 
     const ms_jenisKp = await tx.ms_jenis_kenaikan.findUnique({
       where: {
-        jenis_kp_kode: profile.jenisKPId,
+        jenis_kp_kode: toInt(profile.jenisKPId),
       },
     });
     if (!ms_golongan || !ms_jenisKp) {
