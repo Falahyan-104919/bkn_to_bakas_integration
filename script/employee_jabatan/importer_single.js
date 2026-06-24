@@ -249,6 +249,7 @@ async function processRecordsForNip(nip, records) {
         trx_jabatan_status_jabatan: 1,
         trx_jabatan_file_ba: null,
         trx_jabatan_type: 1,
+        trx_jabatan_bkn_id: record.id,
         ...organizationAndJabatan,
       };
 
