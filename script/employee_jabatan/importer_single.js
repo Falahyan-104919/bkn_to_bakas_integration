@@ -85,50 +85,21 @@ const findOrganizationAndJabatan = async (record) => {
 
   const instansiID = await prisma.ms_instansi_pusat.findFirst({
     where: {
-      AND: [
-        { ms_instansi_pusat_instansi_id: { startsWith: instansiKerjaId } },
-        { ms_instansi_pusat_satker_id: { startsWith: satuanKerjaId } }
-      ],
+      AND: [{ ms_instansi_pusat_instansi_id: { startsWith: instansiKerjaId } }, { ms_instansi_pusat_satker_id: { startsWith: satuanKerjaId } }],
     },
   });
 
   const provinsiID = await prisma.ms_provinsi.findFirst({
     where: {
-      AND: [
-        { provinsi_instansi_id: { startsWith: instansiKerjaId } },
-        { provinsi_satker_id: { startsWith: satuanKerjaId } }
-      ],
+      AND: [{ provinsi_instansi_id: { startsWith: instansiKerjaId } }, { provinsi_satker_id: { startsWith: satuanKerjaId } }],
     },
   });
 
   const kabKotID = await prisma.ms_kota.findFirst({
     where: {
-      AND: [
-        { kota_instansi_id: { startsWith: instansiKerjaId } },
-        { kota_satker_id: { startsWith: satuanKerjaId } }
-      ],
+      AND: [{ kota_instansi_id: { startsWith: instansiKerjaId } }, { kota_satker_id: { startsWith: satuanKerjaId } }],
     },
   });
-
-  if (instansiID) {
-    return {
-      trx_jabatan_instansi_type: 1,
-      trx_jabatan_instansi: instansiID.ms_instansi_pusat_id,
-      trx_jabatan_jabatan_organization: `${satuanKerjaNama} ${unorIndukNama} ${unorNama}`,
-      trx_jabatan_jabatan_eselon: eselon_id,
-      trx_jabatan_jabatan_nama: namaJabatan,
-    };
-  }
-
-  if (provinsiID) {
-    return {
-      trx_jabatan_instansi_type: 2,
-      trx_jabatan_instansi: provinsiID.provinsi_id,
-      trx_jabatan_jabatan_organization: `${satuanKerjaNama} ${unorIndukNama} ${unorNama}`,
-      trx_jabatan_jabatan_eselon: eselon_id,
-      trx_jabatan_jabatan_nama: namaJabatan,
-    };
-  }
 
   if (kabKotID) {
     const data = {
@@ -164,14 +135,47 @@ const findOrganizationAndJabatan = async (record) => {
       data.trx_jabatan_organization_id = organization.organization_id;
       return data;
     } else {
-      data.trx_jabatan_jabatan_organization = `${satuanKerjaNama} ${unorIndukNama} ${unorNama}`;
+      data.trx_jabatan_jabatan_organization = `${satuanKerjaNama.toUpperCase()}, ${unorIndukNama.toUpperCase()}, ${unorNama.toUpperCase()}`;
       data.trx_jabatan_jabatan_eselon = eselon_id;
-      data.trx_jabatan_jabatan_nama = jabatanFungsionalNama || jabatanFungsionalUmumNama || namaJabatan;
+      data.trx_jabatan_jabatan_nama = jabatanFungsionalNama || jabatanFungsionalUmumNama || namaJabatan.toUpperCase();
       return data;
     }
   }
 
-  return null;
+  if (provinsiID) {
+    return {
+      trx_jabatan_instansi_type: 2,
+      trx_jabatan_instansi: provinsiID.provinsi_id,
+      trx_jabatan_jabatan_organization: `${satuanKerjaNama.toUpperCase()}, ${unorIndukNama.toUpperCase()}, ${unorNama.toUpperCase()}`,
+      trx_jabatan_jabatan_eselon: eselon_id,
+      trx_jabatan_jabatan_nama: namaJabatan.toUpperCase(),
+    };
+  }
+
+  if (instansiID) {
+    return {
+      trx_jabatan_instansi_type: 1,
+      trx_jabatan_instansi: instansiID.ms_instansi_pusat_id,
+      trx_jabatan_jabatan_organization: `${satuanKerjaNama.toUpperCase()}, ${unorIndukNama.toUpperCase()}, ${unorNama.toUpperCase()}`,
+      trx_jabatan_jabatan_eselon: eselon_id,
+      trx_jabatan_jabatan_nama: namaJabatan.toUpperCase(),
+    };
+  } else {
+    const newInstansiPusat = await prisma.ms_instansi_pusat.create({
+      data: {
+        ms_instansi_pusat_nama: record.instansiKerjaNama,
+        ms_instansi_pusat_instansi_id: record.instansiKerjaId,
+        ms_instansi_pusat_satker_id: record.satuanKerjaId,
+      },
+    });
+    return {
+      trx_jabatan_instansi_type: 1,
+      trx_jabatan_instansi: newInstansiPusat.ms_instansi_pusat_id,
+      trx_jabatan_jabatan_organization: `${satuanKerjaNama.toUpperCase()} ${unorIndukNama.toUpperCase()} ${unorNama.toUpperCase()}`,
+      trx_jabatan_jabatan_eselon: eselon_id,
+      trx_jabatan_jabatan_nama: namaJabatan.toUpperCase(),
+    };
+  }
 };
 
 function sanitizeFileName(name) {
@@ -313,7 +317,7 @@ async function processRecordsForNip(nip, records) {
               file_employee_id: employee.employee_id,
               file_name: newFilename,
               file_type: fileMapping.fileType,
-              file_path: finalFilePath,
+              file_path: finalFilePath.substring(26),
               file_status: 1,
               file_create_by: SUPERADMIN_ID,
               file_create_date: new Date(),
