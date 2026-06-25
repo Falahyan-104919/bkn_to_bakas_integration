@@ -26,8 +26,8 @@ const BKN_DOC_ID_TO_FILE_KEY = {
 
 // --- This is your mapping from 'fileKey' to DB column info ---
 const LOCAL_FILE_KEY_MAPPING = {
-  skJabatan: { fileType: 11, field: "trx_jabatan_file_id" },
-  spPelantikan: { fileType: 40, field: "trx_jabatan_file_spp" },
+  SK_JABATAN: { fileType: 11, field: "trx_jabatan_file_id" },
+  SK_PELANTIKAN: { fileType: 40, field: "trx_jabatan_file_spp" },
   baJabatan: { fileType: 41, field: "trx_jabatan_file_ba" },
 };
 
