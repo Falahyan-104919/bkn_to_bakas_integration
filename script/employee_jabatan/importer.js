@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 // --- TODO: 1. UPDATE YOUR PRISMA IMPORT ---
 const { PrismaClient } = require("@prisma/client"); // Use this for default
-const logger = require("./logger");
+const logger = require("../logger");
 
 const prisma = new PrismaClient();
 
