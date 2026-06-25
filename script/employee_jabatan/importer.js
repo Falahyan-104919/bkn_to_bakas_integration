@@ -460,10 +460,10 @@ async function processRecordsForNip(nip, records) {
       txSuccess = true;
 
       for (const op of fileMoveOps) {
-        if (fs.existsSync(op.sourcePath)) {
-          await fsp.unlink(op.sourcePath); // Clean up temp file
-        }
-        logger.info(`[FILE_MOVE] Successfully finalized file: ${op.finalFilePath}`);
+        // if (fs.existsSync(op.sourcePath)) {
+        //   await fsp.unlink(op.sourcePath); // Clean up temp file
+        // }
+        logger.info(`[FILE_COPY] Successfully finalized file: ${op.finalFilePath}`);
       }
 
       logger.info(`[SUCCESS] Processed record ${record.id} for NIP ${nip}`);
