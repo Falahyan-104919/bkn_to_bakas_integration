@@ -421,7 +421,7 @@ async function processRecordsForNip(nip, records) {
               where: { file_id: fileId },
               data: {
                 file_name: fileData.createData.file_name,
-                file_path: fileData.createData.file_path,
+                file_path: fileData.createData.file_path.substring(26),
                 file_size: fileData.createData.file_size,
                 file_ext: fileData.createData.file_ext,
                 file_status: 1,
