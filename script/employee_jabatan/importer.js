@@ -376,7 +376,7 @@ async function processRecordsForNip(nip, records) {
 
       await prisma.$transaction(async (tx) => {
         const uniqueWhere = {
-          trx_jabatan_employee_id_trx_jabatan_tmt: {
+          employeeID_TMT: {
             trx_jabatan_employee_id: employee.employee_id,
             trx_jabatan_tmt: parsedTmtJabatan,
           },
